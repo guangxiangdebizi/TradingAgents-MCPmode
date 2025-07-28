@@ -1,0 +1,87 @@
+{
+  "session_id": "给我分析下北方华创",
+  "start_time": "2025-07-28T13:48:22.705471",
+  "status": "running",
+  "user_query": "",
+  "current_stage": "",
+  "current_agent": "news_analyst",
+  "agents_progress": {
+    "market_analyst": {
+      "status": "running",
+      "start_time": "2025-07-28T13:48:22.712739",
+      "actions": [],
+      "results": [],
+      "mcp_calls": [],
+      "errors": []
+    },
+    "sentiment_analyst": {
+      "status": "running",
+      "start_time": "2025-07-28T13:48:29.343060",
+      "actions": [],
+      "results": [],
+      "mcp_calls": [],
+      "errors": []
+    },
+    "news_analyst": {
+      "status": "running",
+      "start_time": "2025-07-28T13:49:25.643285",
+      "actions": [],
+      "results": [],
+      "mcp_calls": [],
+      "errors": []
+    }
+  },
+  "global_state": {},
+  "timeline": [
+    {
+      "type": "workflow_start",
+      "timestamp": "2025-07-28T13:48:22.707226",
+      "data": {
+        "user_query": "给我分析下北方华创",
+        "timestamp": "2025-07-28T13:48:22.707212",
+        "agents_count": 12,
+        "max_debate_rounds": 3,
+        "max_risk_debate_rounds": 2
+      }
+    },
+    {
+      "type": "agent_start",
+      "timestamp": "2025-07-28T13:48:22.712744",
+      "data": {
+        "agent": "market_analyst",
+        "action": ""
+      }
+    },
+    {
+      "type": "agent_start",
+      "timestamp": "2025-07-28T13:48:29.343064",
+      "data": {
+        "agent": "sentiment_analyst",
+        "action": ""
+      }
+    },
+    {
+      "type": "agent_start",
+      "timestamp": "2025-07-28T13:49:25.643287",
+      "data": {
+        "agent": "news_analyst",
+        "action": ""
+      }
+    }
+  ],
+  "errors": [],
+  "warnings": [],
+  "mcp_tool_calls": [],
+  "debate_states": {
+    "investment_debate": {},
+    "risk_debate": {}
+  },
+  "final_results": {},
+  "workflow_info": {
+    "user_query": "给我分析下北方华创",
+    "timestamp": "2025-07-28T13:48:22.707212",
+    "agents_count": 12,
+    "max_debate_rounds": 3,
+    "max_risk_debate_rounds": 2
+  }
+}

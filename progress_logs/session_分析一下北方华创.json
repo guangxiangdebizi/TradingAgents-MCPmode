@@ -1,0 +1,55 @@
+{
+  "session_id": "分析一下北方华创",
+  "start_time": "2025-07-28T14:43:21.452968",
+  "status": "running",
+  "user_query": "",
+  "current_stage": "",
+  "current_agent": "market_analyst",
+  "agents_progress": {
+    "market_analyst": {
+      "status": "running",
+      "start_time": "2025-07-28T14:43:21.460446",
+      "actions": [],
+      "results": [],
+      "mcp_calls": [],
+      "errors": []
+    }
+  },
+  "global_state": {},
+  "timeline": [
+    {
+      "type": "workflow_start",
+      "timestamp": "2025-07-28T14:43:21.454285",
+      "data": {
+        "user_query": "分析一下北方华创",
+        "timestamp": "2025-07-28T14:43:21.454278",
+        "agents_count": 12,
+        "max_debate_rounds": 3,
+        "max_risk_debate_rounds": 2
+      }
+    },
+    {
+      "type": "agent_start",
+      "timestamp": "2025-07-28T14:43:21.460450",
+      "data": {
+        "agent": "market_analyst",
+        "action": ""
+      }
+    }
+  ],
+  "errors": [],
+  "warnings": [],
+  "mcp_tool_calls": [],
+  "debate_states": {
+    "investment_debate": {},
+    "risk_debate": {}
+  },
+  "final_results": {},
+  "workflow_info": {
+    "user_query": "分析一下北方华创",
+    "timestamp": "2025-07-28T14:43:21.454278",
+    "agents_count": 12,
+    "max_debate_rounds": 3,
+    "max_risk_debate_rounds": 2
+  }
+}

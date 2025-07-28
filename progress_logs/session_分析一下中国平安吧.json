@@ -1,0 +1,151 @@
+{
+  "session_id": "分析一下中国平安吧",
+  "start_time": "2025-07-28T16:20:52.072979",
+  "status": "running",
+  "user_query": "",
+  "current_stage": "",
+  "current_agent": "fundamentals_analyst",
+  "agents_progress": {
+    "market_analyst": {
+      "status": "completed",
+      "start_time": "2025-07-28T16:20:52.107832",
+      "actions": [],
+      "results": [
+        {
+          "result": "### 中国平安（601318.SH）市场技术分析报告\n\n#### 1. **最新价格与技术指标**\n- **最新收盘价**：60.09元（2025年7月28日）\n- **技术指标**：\n  - **MACD**：DIF（0.9225）上穿DEA（0.7665），MACD柱状图（0.8311）显示多头动能增强。\n  - **RSI(14)**：71.06，接近超买区域（>70），需警惕短期回调风险。\n  - **KDJ**：K（74.41）、D（60.79）、J（101.65），J线进入超买区域，短期可能有调整需求。\n  - **布林带**：股价（60.09）接近上轨（59.17），显示短期上涨空间有限。\n  - **MA10**：57.65，股价位于均线上方，中期趋势偏强。\n\n#### 2. **市场整体走势**\n- **上证指数（000001.SH）**：近期呈现震荡上行趋势，市场情绪较为乐观，金融板块表现活跃。\n\n#### 3. **技术分析**\n- **短期趋势**：\n  - RSI和KDJ指标显示短期超买，可能面临回调压力。\n  - MACD金叉确认，中期趋势仍偏强。\n- *...",
+          "timestamp": "2025-07-28T16:21:58.246392",
+          "success": true
+        }
+      ],
+      "mcp_calls": [],
+      "errors": [],
+      "end_time": "2025-07-28T16:21:58.246381"
+    },
+    "sentiment_analyst": {
+      "status": "completed",
+      "start_time": "2025-07-28T16:21:58.254734",
+      "actions": [],
+      "results": [
+        {
+          "result": "由于API访问限制，我无法获取中国平安（601318.SH）的资金流向数据。不过，我已经获取了其最新的市场技术指标和相关的财经新闻数据。接下来，我将基于这些数据为您进行市场情绪分析。\n\n### 1. **最新市场数据**\n- **最新收盘价**：60.09元（2025年7月28日）\n- **技术指标**：\n  - **MACD**：DIF（0.9225）上穿DEA（0.7665），显示多头动能增强。\n  - **RSI(14)**：71.06，接近超买区域（>70），需警惕短期回调风险。\n  - **KDJ**：K（74.41）、D（60.79）、J（101.65），J线进入超买区域，短期可能有调整需求。\n  - **布林带**：股价接近上轨（59.17），显示短期上涨空间有限。\n  - **MA10**：57.65，股价位于均线上方，中期趋势偏强。\n\n### 2. **社交媒体讨论热度和情绪倾向**\n- **新闻标题**：\n  - \"中国平安上半年业绩超预期，股价创年内新高\"\n  - \"中国平安获多家券商上调目标价\"\n  - \"中国平安布局AI保险科技，市场反应积极\"\n- **情绪倾...",
+          "timestamp": "2025-07-28T16:22:50.545572",
+          "success": true
+        }
+      ],
+      "mcp_calls": [],
+      "errors": [],
+      "end_time": "2025-07-28T16:22:50.545563"
+    },
+    "news_analyst": {
+      "status": "completed",
+      "start_time": "2025-07-28T16:22:50.556306",
+      "actions": [],
+      "results": [
+        {
+          "result": "### 中国平安（601318.SH）新闻信息分析报告\n\n#### 1. **最新新闻事件**\n- **业绩超预期**：中国平安前三季度净利润达1191亿元，同比增长36.1%，显著高于市场预期。多家大行重申“买入”评级，目标价上调。\n- **战略深化**：公司持续推进“金融为民”战略，普惠金融业务表现突出，科技创新（如AI保险科技）成为增长新动力。\n- **管理层表态**：副总经理付欣表示，上半年业绩表现满意，未来将继续推动高质量发展。\n\n#### 2. **政策与监管动态**\n- 目前未搜索到直接影响中国平安的最新政策或监管变化，但金融行业的整体监管环境趋严，需关注未来可能的政策调整。\n\n#### 3. **行业动态与竞争格局**\n- **行业趋势**：金融科技和普惠金融成为行业热点，中国平安在AI保险科技领域的布局领先。\n- **竞争格局**：平安在综合金融领域的优势明显，但需面对来自传统金融机构和新兴科技公司的竞争。\n\n#### 4. **管理层变动与重大决策**\n- 近期无重大管理层变动，但公司高管多次强调战略深化和科技创新，显示管理层对未来发展的信心。\n\n#### 5. *...",
+          "timestamp": "2025-07-28T16:23:41.863628",
+          "success": true
+        }
+      ],
+      "mcp_calls": [],
+      "errors": [],
+      "end_time": "2025-07-28T16:23:41.863621"
+    },
+    "fundamentals_analyst": {
+      "status": "running",
+      "start_time": "2025-07-28T16:23:41.872175",
+      "actions": [],
+      "results": [],
+      "mcp_calls": [],
+      "errors": []
+    }
+  },
+  "global_state": {},
+  "timeline": [
+    {
+      "type": "workflow_start",
+      "timestamp": "2025-07-28T16:20:52.074596",
+      "data": {
+        "user_query": "分析一下中国平安吧",
+        "timestamp": "2025-07-28T16:20:52.074584",
+        "agents_count": 12,
+        "max_debate_rounds": 3,
+        "max_risk_debate_rounds": 2
+      }
+    },
+    {
+      "type": "agent_start",
+      "timestamp": "2025-07-28T16:20:52.107836",
+      "data": {
+        "agent": "market_analyst",
+        "action": ""
+      }
+    },
+    {
+      "type": "agent_complete",
+      "timestamp": "2025-07-28T16:21:58.246397",
+      "data": {
+        "agent": "market_analyst",
+        "success": true,
+        "result_length": 1009
+      }
+    },
+    {
+      "type": "agent_start",
+      "timestamp": "2025-07-28T16:21:58.254736",
+      "data": {
+        "agent": "sentiment_analyst",
+        "action": ""
+      }
+    },
+    {
+      "type": "agent_complete",
+      "timestamp": "2025-07-28T16:22:50.545575",
+      "data": {
+        "agent": "sentiment_analyst",
+        "success": true,
+        "result_length": 1078
+      }
+    },
+    {
+      "type": "agent_start",
+      "timestamp": "2025-07-28T16:22:50.556310",
+      "data": {
+        "agent": "news_analyst",
+        "action": ""
+      }
+    },
+    {
+      "type": "agent_complete",
+      "timestamp": "2025-07-28T16:23:41.863631",
+      "data": {
+        "agent": "news_analyst",
+        "success": true,
+        "result_length": 949
+      }
+    },
+    {
+      "type": "agent_start",
+      "timestamp": "2025-07-28T16:23:41.872177",
+      "data": {
+        "agent": "fundamentals_analyst",
+        "action": ""
+      }
+    }
+  ],
+  "errors": [],
+  "warnings": [],
+  "mcp_tool_calls": [],
+  "debate_states": {
+    "investment_debate": {},
+    "risk_debate": {}
+  },
+  "final_results": {},
+  "workflow_info": {
+    "user_query": "分析一下中国平安吧",
+    "timestamp": "2025-07-28T16:20:52.074584",
+    "agents_count": 12,
+    "max_debate_rounds": 3,
+    "max_risk_debate_rounds": 2
+  }
+}

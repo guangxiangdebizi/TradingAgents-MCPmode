@@ -1,0 +1,19 @@
+{
+  "session_id": "给我分析一下北方华创",
+  "start_time": "2025-07-28T13:42:54.628803",
+  "status": "running",
+  "user_query": "",
+  "current_stage": "",
+  "current_agent": "",
+  "agents_progress": {},
+  "global_state": {},
+  "timeline": [],
+  "errors": [],
+  "warnings": [],
+  "mcp_tool_calls": [],
+  "debate_states": {
+    "investment_debate": {},
+    "risk_debate": {}
+  },
+  "final_results": {}
+}

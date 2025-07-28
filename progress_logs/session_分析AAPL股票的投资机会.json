@@ -1,0 +1,55 @@
+{
+  "session_id": "分析AAPL股票的投资机会",
+  "start_time": "2025-07-28T16:02:42.198444",
+  "status": "running",
+  "user_query": "",
+  "current_stage": "",
+  "current_agent": "market_analyst",
+  "agents_progress": {
+    "market_analyst": {
+      "status": "running",
+      "start_time": "2025-07-28T16:02:42.225715",
+      "actions": [],
+      "results": [],
+      "mcp_calls": [],
+      "errors": []
+    }
+  },
+  "global_state": {},
+  "timeline": [
+    {
+      "type": "workflow_start",
+      "timestamp": "2025-07-28T16:02:42.199466",
+      "data": {
+        "user_query": "分析AAPL股票的投资机会",
+        "timestamp": "2025-07-28T16:02:42.199459",
+        "agents_count": 12,
+        "max_debate_rounds": 3,
+        "max_risk_debate_rounds": 2
+      }
+    },
+    {
+      "type": "agent_start",
+      "timestamp": "2025-07-28T16:02:42.225718",
+      "data": {
+        "agent": "market_analyst",
+        "action": ""
+      }
+    }
+  ],
+  "errors": [],
+  "warnings": [],
+  "mcp_tool_calls": [],
+  "debate_states": {
+    "investment_debate": {},
+    "risk_debate": {}
+  },
+  "final_results": {},
+  "workflow_info": {
+    "user_query": "分析AAPL股票的投资机会",
+    "timestamp": "2025-07-28T16:02:42.199459",
+    "agents_count": 12,
+    "max_debate_rounds": 3,
+    "max_risk_debate_rounds": 2
+  }
+}
