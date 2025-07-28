@@ -341,6 +341,9 @@ def main():
             while True:
                 log_message = st.session_state.log_queue.get_nowait()
                 new_logs.append(log_message)
+                # 检查分析完成标志
+                if "🎉 分析完成！" in log_message:
+                    st.session_state.analysis_running = False
         except queue.Empty:
             pass
         
@@ -386,9 +389,9 @@ def main():
         else:
             st.info("暂无日志信息")
         
-        # 自动刷新
+        # 自动刷新 - 减少刷新频率以避免状态更新延迟
         if st.session_state.analysis_running:
-            time.sleep(1)
+            time.sleep(2)  # 增加刷新间隔
             st.rerun()
     
     with col2:

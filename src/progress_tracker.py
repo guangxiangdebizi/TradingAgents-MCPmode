@@ -110,7 +110,7 @@ class ProgressTracker:
             
             if result:
                 self.progress_data["agents_progress"][agent_name]["results"].append({
-                    "result": result[:500] + "..." if len(result) > 500 else result,  # 限制长度
+                    "result": result,  # 保留完整内容
                     "timestamp": datetime.now().isoformat(),
                     "success": success
                 })
@@ -146,7 +146,7 @@ class ProgressTracker:
             "agent": agent_name,
             "tool_name": tool_name,
             "tool_args": tool_args,
-            "tool_result": str(tool_result)[:1000] + "..." if len(str(tool_result)) > 1000 else str(tool_result),
+            "tool_result": str(tool_result),  # 保留完整工具结果
             "timestamp": datetime.now().isoformat()
         }
         
@@ -284,7 +284,7 @@ class ProgressTracker:
     def log_llm_call(self, agent_name: str, prompt_preview: str, context: Dict[str, Any] = None):
         """记录LLM调用"""
         self.add_agent_action(agent_name, "LLM调用", {
-            "prompt_preview": prompt_preview[:200] + "..." if len(prompt_preview) > 200 else prompt_preview,
+            "prompt_preview": prompt_preview,  # 保留完整提示内容
             "context": context
         })
     

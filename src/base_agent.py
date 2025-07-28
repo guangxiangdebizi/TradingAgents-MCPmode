@@ -203,14 +203,14 @@ class BaseAgent(ABC):
                     state['agent_executions'].append({
                         'agent_name': self.agent_name,
                         'action': "LLM调用(带MCP工具)",
-                        'result': result[:200] + "..." if len(result) > 200 else result,
+                        'result': result,  # 保留完整结果
                         'mcp_used': True
                     })
                 else:
                     state.add_agent_execution(
                         agent_name=self.agent_name,
                         action="LLM调用(带MCP工具)",
-                        result=result[:200] + "..." if len(result) > 200 else result,
+                        result=result,  # 保留完整结果
                         mcp_used=True
                     )
 
@@ -222,14 +222,14 @@ class BaseAgent(ABC):
                     state['agent_executions'].append({
                         'agent_name': self.agent_name,
                         'action': "LLM调用(无工具)",
-                        'result': result[:200] + "..." if len(result) > 200 else result,
+                        'result': result,  # 保留完整结果
                         'mcp_used': False
                     })
                 else:
                     state.add_agent_execution(
                         agent_name=self.agent_name,
                         action="LLM调用(无工具)",
-                        result=result[:200] + "..." if len(result) > 200 else result,
+                        result=result,  # 保留完整结果
                         mcp_used=False
                     )
             
