@@ -1,5 +1,5 @@
 from typing import Dict, Any
-from loguru import logger
+
 from ..base_agent import BaseAgent
 from ..agent_states import AgentState
 from ..mcp_manager import MCPManager
@@ -46,7 +46,6 @@ class AggressiveRiskAnalyst(BaseAgent):
         """执行激进风险分析"""
         # 处理状态可能是字典或AgentState对象的情况
         user_query = state.get('user_query', '') if isinstance(state, dict) else state.user_query
-        logger.info(f"激进风险分析师开始分析 - 用户问题: {user_query}")
         
         if not self.validate_state(state):
             return state
@@ -123,11 +122,11 @@ class AggressiveRiskAnalyst(BaseAgent):
             else:
                 state.risk_debate_state = new_risk_debate_state
             
-            logger.info(f"激进风险分析师完成第{count+1}轮分析")
+
             
         except Exception as e:
             error_msg = f"激进风险分析失败: {str(e)}"
-            logger.error(error_msg)
+            print(f"❌ {error_msg}")
             if isinstance(state, dict):
                 if 'errors' not in state:
                     state['errors'] = []
@@ -179,7 +178,6 @@ class SafeRiskAnalyst(BaseAgent):
         """执行保守风险分析"""
         # 处理状态可能是字典或AgentState对象的情况
         user_query = state.get('user_query', '') if isinstance(state, dict) else state.user_query
-        logger.info(f"保守风险分析师开始分析 - 用户问题: {user_query}")
         
         if not self.validate_state(state):
             return state
@@ -236,11 +234,11 @@ class SafeRiskAnalyst(BaseAgent):
             else:
                 state.risk_debate_state = new_risk_debate_state
             
-            logger.info(f"保守风险分析师完成第{count+1}轮分析")
+
             
         except Exception as e:
             error_msg = f"保守风险分析失败: {str(e)}"
-            logger.error(error_msg)
+            print(f"❌ {error_msg}")
             if isinstance(state, dict):
                 if 'errors' not in state:
                     state['errors'] = []
@@ -292,7 +290,6 @@ class NeutralRiskAnalyst(BaseAgent):
         """执行中性风险分析"""
         # 处理状态可能是字典或AgentState对象的情况
         user_query = state.get('user_query', '') if isinstance(state, dict) else state.user_query
-        logger.info(f"中性风险分析师开始分析 - 用户问题: {user_query}")
         
         if not self.validate_state(state):
             return state
@@ -349,11 +346,11 @@ class NeutralRiskAnalyst(BaseAgent):
             else:
                 state.risk_debate_state = new_risk_debate_state
             
-            logger.info(f"中性风险分析师完成第{count+1}轮分析")
+
             
         except Exception as e:
             error_msg = f"中性风险分析失败: {str(e)}"
-            logger.error(error_msg)
+            print(f"❌ {error_msg}")
             if isinstance(state, dict):
                 if 'errors' not in state:
                     state['errors'] = []
@@ -405,7 +402,6 @@ class RiskManager(BaseAgent):
         """执行最终风险决策"""
         # 处理状态可能是字典或AgentState对象的情况
         user_query = state.get('user_query', '') if isinstance(state, dict) else state.user_query
-        logger.info(f"风险经理开始最终决策 - 用户问题: {user_query}")
         
         if not self.validate_state(state):
             return state
@@ -450,11 +446,11 @@ class RiskManager(BaseAgent):
             else:
                 state.final_trade_decision = formatted_decision
             
-            logger.info("风险经理完成最终决策")
+
             
         except Exception as e:
             error_msg = f"最终风险决策失败: {str(e)}"
-            logger.error(error_msg)
+            print(f"❌ {error_msg}")
             if isinstance(state, dict):
                 if 'errors' not in state:
                     state['errors'] = []

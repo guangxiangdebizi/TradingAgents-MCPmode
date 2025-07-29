@@ -10,7 +10,7 @@ import sys
 import asyncio
 import argparse
 from typing import Optional
-from loguru import logger
+
 from dotenv import load_dotenv
 
 # 添加项目根目录到Python路径
@@ -21,30 +21,8 @@ from src.agent_states import AgentState
 
 
 def setup_logging(debug_mode: bool = False, log_file: Optional[str] = None):
-    """设置日志配置"""
-    # 移除默认处理器
-    logger.remove()
-    
-    # 设置日志级别
-    level = "DEBUG" if debug_mode else "INFO"
-    
-    # 控制台输出
-    logger.add(
-        sys.stdout,
-        level=level,
-        format="<green>{time:YYYY-MM-DD HH:mm:ss}</green> | <level>{level: <8}</level> | <cyan>{name}</cyan>:<cyan>{function}</cyan>:<cyan>{line}</cyan> - <level>{message}</level>",
-        colorize=True
-    )
-    
-    # 文件输出（如果指定）
-    if log_file:
-        logger.add(
-            log_file,
-            level=level,
-            format="{time:YYYY-MM-DD HH:mm:ss} | {level: <8} | {name}:{function}:{line} - {message}",
-            rotation="10 MB",
-            retention="7 days"
-        )
+    """简化的日志配置"""
+    pass  # 不再需要复杂的日志配置
 
 
 def print_banner():
@@ -85,8 +63,40 @@ def print_analysis_result(result):
             return getattr(state, key, [])
     
     print("\n" + "="*80)
-    print("📊 交易分析结果")
-    print("="*80)
+    
+    # 自动生成HTML报告
+    try:
+        from src.report_generator import ReportGenerator
+        
+        # 准备报告数据
+        report_data = {
+            'user_query': safe_get('user_query'),
+            'market_report': safe_get('market_report'),
+            'sentiment_report': safe_get('sentiment_report'),
+            'news_report': safe_get('news_report'),
+            'fundamentals_report': safe_get('fundamentals_report'),
+            'investment_plan': safe_get('investment_plan'),
+            'trader_investment_plan': safe_get('trader_investment_plan'),
+            'final_trade_decision': safe_get('final_trade_decision'),
+            'investment_debate_state': safe_get('investment_debate_state', {}),
+            'risk_debate_state': safe_get('risk_debate_state', {}),
+            'errors': safe_get_list('errors'),
+            'warnings': safe_get_list('warnings'),
+            'mcp_tool_calls': safe_get_list('mcp_tool_calls'),
+            'agent_execution_history': safe_get_list('agent_execution_history')
+        }
+        
+        # 生成HTML报告
+        generator = ReportGenerator()
+        html_file = generator.generate_report(report_data, 'html')
+        
+        if html_file:
+            print(f"\n🌐 HTML报告已自动生成: {html_file}")
+            print("💡 您可以在浏览器中打开此文件查看美观的分析报告")
+        
+    except Exception as e:
+        print(f"\n⚠️ HTML报告生成失败: {e}")
+        print("💡 请确保已安装markdown库: pip install markdown")
     
     # 基本信息
     print(f"🏢 用户问题: {safe_get('user_query')}")
@@ -185,7 +195,7 @@ async def run_single_analysis(user_query: str, config_file: str):
     
     try:
         # 初始化
-        logger.info("正在初始化工作流编排器...")
+        print("正在初始化工作流编排器...")
         await orchestrator.initialize()
         
         # 显示配置信息
@@ -193,15 +203,15 @@ async def run_single_analysis(user_query: str, config_file: str):
         agent_permissions = orchestrator.get_agent_permissions()
         enabled_agents = orchestrator.get_enabled_agents()
         
-        logger.info(f"智能体总数: {workflow_info['agents_count']}")
-        logger.info(f"启用MCP的智能体: {len(enabled_agents)}")
-        logger.info(f"MCP工具总数: {workflow_info['mcp_tools_info']['total_tools']}")
+        print(f"智能体总数: {workflow_info['agents_count']}")
+        print(f"启用MCP的智能体: {len(enabled_agents)}")
+        print(f"MCP工具总数: {workflow_info['mcp_tools_info']['total_tools']}")
         
         if enabled_agents:
-            logger.info(f"启用MCP的智能体: {', '.join(enabled_agents)}")
+            print(f"启用MCP的智能体: {', '.join(enabled_agents)}")
         
         # 运行分析
-        logger.info(f"开始分析用户问题: {user_query}")
+        print(f"开始分析用户问题: {user_query}")
         result = await orchestrator.run_analysis(user_query)
         
         # 显示结果
@@ -210,7 +220,7 @@ async def run_single_analysis(user_query: str, config_file: str):
         return result
         
     except Exception as e:
-        logger.error(f"分析过程中发生错误: {e}")
+        print(f"❌ 分析过程中发生错误: {e}")
         raise
     finally:
         await orchestrator.close()
@@ -222,7 +232,7 @@ async def run_interactive_mode(config_file: str):
     
     try:
         # 初始化
-        logger.info("正在初始化工作流编排器...")
+        print("正在初始化工作流编排器...")
         await orchestrator.initialize()
         
         # 显示配置信息
@@ -281,7 +291,7 @@ async def run_interactive_mode(config_file: str):
                 print("\n\n👋 用户中断，程序退出")
                 break
             except Exception as e:
-                logger.error(f"交互过程中发生错误: {e}")
+                print(f"❌ 交互过程中发生错误: {e}")
                 print(f"❌ 发生错误: {e}")
                 continue
                 
@@ -328,24 +338,24 @@ def main():
     
     # 检查配置文件
     if not os.path.exists(args.config):
-        logger.error(f"配置文件不存在: {args.config}")
+        print(f"❌ 配置文件不存在: {args.config}")
         sys.exit(1)
     
     try:
         if args.query:
             # 单次分析模式
-            logger.info(f"单次分析模式: {args.query}")
+            print(f"单次分析模式: {args.query}")
             asyncio.run(run_single_analysis(args.query, args.config))
         else:
             # 交互模式
-            logger.info("启动交互模式")
+            print("启动交互模式")
             asyncio.run(run_interactive_mode(args.config))
             
     except KeyboardInterrupt:
-        logger.info("用户中断程序")
+        print("用户中断程序")
         sys.exit(0)
     except Exception as e:
-        logger.error(f"程序执行失败: {e}")
+        print(f"❌ 程序执行失败: {e}")
         sys.exit(1)
 
 

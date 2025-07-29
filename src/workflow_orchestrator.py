@@ -2,13 +2,12 @@ import os
 import asyncio
 from typing import Dict, Any, List, Optional
 from datetime import datetime
-from loguru import logger
 from langgraph.graph import StateGraph, END
 from dotenv import load_dotenv
 
 from .agent_states import AgentState
 from .mcp_manager import MCPManager
-from .progress_tracker import ProgressTracker
+from .core import ProgressManager
 from .agents.analysts import (
     MarketAnalyst, SentimentAnalyst, NewsAnalyst, FundamentalsAnalyst
 )
@@ -29,8 +28,8 @@ class WorkflowOrchestrator:
         # 初始化MCP管理器
         self.mcp_manager = MCPManager(config_file)
         
-        # 初始化进度跟踪器
-        self.progress_tracker = None
+        # 初始化进度管理器
+        self.progress_manager = None
         
         # 初始化所有智能体
         self.agents = self._initialize_agents()
@@ -44,7 +43,7 @@ class WorkflowOrchestrator:
         # 创建状态图
         self.workflow = self._create_workflow()
         
-        logger.info("工作流编排器初始化完成")
+        print("🚀 工作流编排器初始化完成")
     
     def _initialize_agents(self) -> Dict[str, Any]:
         """初始化所有智能体"""
@@ -160,35 +159,27 @@ class WorkflowOrchestrator:
     # 节点处理函数
     async def _market_analyst_node(self, state: AgentState) -> AgentState:
         """市场分析师节点"""
-        logger.info("🏢 ===== 第1阶段：市场分析师开始工作 =====")
-        logger.info("📈 正在进行市场技术面分析...")
-        result = await self.agents["market_analyst"].process(state, self.progress_tracker)
-        logger.info("✅ 市场分析师完成分析")
+        print("🏢 第1阶段：市场分析师")
+        result = await self.agents["market_analyst"].process(state, self.progress_manager)
         return result
     
     async def _sentiment_analyst_node(self, state: AgentState) -> AgentState:
         """情绪分析师节点"""
-        logger.info("😊 ===== 情绪分析师开始工作 =====")
-        logger.info("💭 正在分析市场情绪和投资者心理...")
-        result = await self.agents["sentiment_analyst"].process(state, self.progress_tracker)
-        logger.info("✅ 情绪分析师完成分析")
+        print("😊 情绪分析师")
+        result = await self.agents["sentiment_analyst"].process(state, self.progress_manager)
         return result
-    
+
     async def _news_analyst_node(self, state: AgentState) -> AgentState:
         """新闻分析师节点"""
-        logger.info("📰 ===== 新闻分析师开始工作 =====")
-        logger.info("🔍 正在分析相关新闻和信息面...")
-        result = await self.agents["news_analyst"].process(state, self.progress_tracker)
-        logger.info("✅ 新闻分析师完成分析")
+        print("📰 新闻分析师")
+        result = await self.agents["news_analyst"].process(state, self.progress_manager)
         return result
-    
+
     async def _fundamentals_analyst_node(self, state: AgentState) -> AgentState:
         """基本面分析师节点"""
-        logger.info("📊 ===== 基本面分析师开始工作 =====")
-        logger.info("💰 正在分析公司财务和基本面数据...")
-        result = await self.agents["fundamentals_analyst"].process(state, self.progress_tracker)
-        logger.info("✅ 基本面分析师完成分析")
-        logger.info("🎯 第1阶段（分析师团队）全部完成！")
+        print("📊 基本面分析师")
+        result = await self.agents["fundamentals_analyst"].process(state, self.progress_manager)
+        print("🎯 第1阶段完成")
         return result
     
     async def _bull_researcher_node(self, state: AgentState) -> AgentState:
@@ -200,10 +191,8 @@ class WorkflowOrchestrator:
             debate_state = state.investment_debate_state
         current_round = debate_state.get('count', 0) + 1
         
-        logger.info(f"🐂 ===== 第2阶段：看涨研究员第{current_round}轮发言 =====")
-        logger.info("📈 正在构建看涨投资论证...")
-        result = await self.agents["bull_researcher"].process(state, self.progress_tracker)
-        logger.info(f"✅ 看涨研究员第{current_round}轮发言完成")
+        print(f"🐂 第2阶段：看涨研究员第{current_round}轮")
+        result = await self.agents["bull_researcher"].process(state, self.progress_manager)
         return result
     
     async def _bear_researcher_node(self, state: AgentState) -> AgentState:
@@ -215,26 +204,20 @@ class WorkflowOrchestrator:
             debate_state = state.investment_debate_state
         current_round = debate_state.get('count', 0) + 1
         
-        logger.info(f"🐻 ===== 看跌研究员第{current_round}轮反驳 =====")
-        logger.info("📉 正在构建看跌风险论证...")
-        result = await self.agents["bear_researcher"].process(state, self.progress_tracker)
-        logger.info(f"✅ 看跌研究员第{current_round}轮反驳完成")
+        print(f"🐻 看跌研究员第{current_round}轮")
+        result = await self.agents["bear_researcher"].process(state, self.progress_manager)
         return result
-    
+
     async def _research_manager_node(self, state: AgentState) -> AgentState:
         """研究经理节点"""
-        logger.info("👔 ===== 第3阶段：研究经理做出投资决策 =====")
-        logger.info("⚖️ 正在评估辩论结果并制定投资策略...")
-        result = await self.agents["research_manager"].process(state, self.progress_tracker)
-        logger.info("✅ 研究经理完成投资决策")
+        print("👔 第3阶段：研究经理")
+        result = await self.agents["research_manager"].process(state, self.progress_manager)
         return result
-    
+
     async def _trader_node(self, state: AgentState) -> AgentState:
         """交易员节点"""
-        logger.info("💼 ===== 交易员制定执行计划 =====")
-        logger.info("📋 正在制定具体的交易执行策略...")
-        result = await self.agents["trader"].process(state, self.progress_tracker)
-        logger.info("✅ 交易员完成执行计划")
+        print("💼 交易员")
+        result = await self.agents["trader"].process(state, self.progress_manager)
         return result
     
     async def _aggressive_risk_analyst_node(self, state: AgentState) -> AgentState:
@@ -246,10 +229,8 @@ class WorkflowOrchestrator:
             risk_debate_state = state.risk_debate_state
         current_round = risk_debate_state.get('count', 0) + 1
         
-        logger.info(f"🚀 ===== 第4阶段：激进风险分析师第{current_round}轮分析 =====")
-        logger.info("⚡ 正在进行激进风险评估...")
-        result = await self.agents["aggressive_risk_analyst"].process(state, self.progress_tracker)
-        logger.info(f"✅ 激进风险分析师第{current_round}轮分析完成")
+        print(f"🚀 第4阶段：激进风险分析师第{current_round}轮")
+        result = await self.agents["aggressive_risk_analyst"].process(state, self.progress_manager)
         return result
     
     async def _safe_risk_analyst_node(self, state: AgentState) -> AgentState:
@@ -261,10 +242,8 @@ class WorkflowOrchestrator:
             risk_debate_state = state.risk_debate_state
         current_round = risk_debate_state.get('count', 0) + 1
         
-        logger.info(f"🛡️ ===== 保守风险分析师第{current_round}轮分析 =====")
-        logger.info("🔒 正在进行保守风险评估...")
-        result = await self.agents["safe_risk_analyst"].process(state, self.progress_tracker)
-        logger.info(f"✅ 保守风险分析师第{current_round}轮分析完成")
+        print(f"🛡️ 保守风险分析师第{current_round}轮")
+        result = await self.agents["safe_risk_analyst"].process(state, self.progress_manager)
         return result
     
     async def _neutral_risk_analyst_node(self, state: AgentState) -> AgentState:
@@ -276,19 +255,15 @@ class WorkflowOrchestrator:
             risk_debate_state = state.risk_debate_state
         current_round = risk_debate_state.get('count', 0) + 1
         
-        logger.info(f"⚖️ ===== 中性风险分析师第{current_round}轮分析 =====")
-        logger.info("📊 正在进行中性风险评估...")
-        result = await self.agents["neutral_risk_analyst"].process(state, self.progress_tracker)
-        logger.info(f"✅ 中性风险分析师第{current_round}轮分析完成")
+        print(f"⚖️ 中性风险分析师第{current_round}轮")
+        result = await self.agents["neutral_risk_analyst"].process(state, self.progress_manager)
         return result
     
     async def _risk_manager_node(self, state: AgentState) -> AgentState:
         """风险经理节点"""
-        logger.info("🎯 ===== 第5阶段：风险管理经理做出最终决策 =====")
-        logger.info("🔍 正在综合评估所有风险分析并做出最终交易决策...")
-        result = await self.agents["risk_manager"].process(state, self.progress_tracker)
-        logger.info("✅ 风险管理经理完成最终决策")
-        logger.info("🏁 所有阶段完成！交易决策流程结束。")
+        print("🎯 第5阶段：风险管理经理")
+        result = await self.agents["risk_manager"].process(state, self.progress_manager)
+        print("🏁 所有阶段完成")
         return result
     
     # 条件判断函数
@@ -334,30 +309,22 @@ class WorkflowOrchestrator:
         try:
             success = await self.mcp_manager.initialize()
             if success:
-                logger.info("✅ 工作流编排器初始化成功")
+                print("✅ 工作流编排器初始化成功")
             else:
-                logger.warning("⚠️ MCP连接失败，将在无工具模式下运行")
+                print("⚠️ MCP连接失败，将在无工具模式下运行")
             return success
         except Exception as e:
-            logger.error(f"❌ 工作流编排器初始化失败: {e}")
+            print(f"❌ 工作流编排器初始化失败: {e}")
             return False
     
     async def run_analysis(self, user_query: str) -> AgentState:
         """运行完整的交易分析流程"""
-        logger.info("🚀 ===== 智能交易分析系统启动 =====")
-        logger.info(f"❓ 用户查询: {user_query}")
-        logger.info("⏰ 开始执行多智能体协作分析流程...")
-        logger.info(f"开始分析流程 - 用户问题: {user_query}")
+        print("🚀 智能交易分析系统启动")
+        print(f"📝 用户查询: {user_query}")
         
         # 初始化进度跟踪器
-        self.progress_tracker = ProgressTracker(user_query)
-        self.progress_tracker.log_workflow_start({
-            "user_query": user_query,
-            "timestamp": datetime.now().isoformat(),
-            "agents_count": len(self.agents),
-            "max_debate_rounds": self.max_debate_rounds,
-            "max_risk_debate_rounds": self.max_risk_debate_rounds
-        })
+        self.progress_manager = ProgressManager()
+        self.progress_manager.start_workflow(user_query)
         
         # 初始化状态
         initial_state = AgentState(
@@ -370,7 +337,6 @@ class WorkflowOrchestrator:
         
         try:
             # 运行工作流
-            logger.info("🔄 工作流程开始执行...")
             workflow_result = await self.workflow.ainvoke(initial_state)
             
             # LangGraph返回字典，需要转换为AgentState对象
@@ -396,17 +362,16 @@ class WorkflowOrchestrator:
             else:
                 final_state = workflow_result
             
-            logger.info("🎉 ===== 分析流程全部完成！ =====")
-            logger.info("📋 最终决策已生成，请查看结果")
-            logger.info("✅ 分析流程完成")
+            print("✅ 分析流程完成")
             
             # 记录最终结果到进度跟踪器
-            if self.progress_tracker:
-                self.progress_tracker.log_workflow_completion({
+            if self.progress_manager:
+                final_results = {
                     "final_state": self._state_to_dict(final_state),
                     "completion_time": datetime.now().isoformat(),
                     "success": True
-                })
+                }
+                self.progress_manager.complete_workflow(True, final_results)
             
             if self.verbose_logging:
                 self._log_analysis_summary(final_state)
@@ -414,15 +379,16 @@ class WorkflowOrchestrator:
             return final_state
             
         except Exception as e:
-            logger.error(f"❌ 分析流程失败: {e}")
+            print(f"❌ 分析流程失败: {e}")
             
             # 记录错误到进度跟踪器
-            if self.progress_tracker:
-                self.progress_tracker.log_workflow_completion({
+            if self.progress_manager:
+                error_results = {
                     "error": str(e),
                     "completion_time": datetime.now().isoformat(),
                     "success": False
-                })
+                }
+                self.progress_manager.complete_workflow(False, error_results)
             
             # 安全地添加错误信息
             try:
@@ -432,8 +398,8 @@ class WorkflowOrchestrator:
                     if 'errors' not in initial_state:
                         initial_state['errors'] = []
                     initial_state['errors'].append(f"工作流执行失败: {str(e)}")
-            except Exception as add_error_exception:
-                logger.error(f"添加错误信息失败: {add_error_exception}")
+            except Exception:
+                pass
             return initial_state
     
     def _state_to_dict(self, state):

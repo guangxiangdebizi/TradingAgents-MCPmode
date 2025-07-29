@@ -4,7 +4,7 @@ from typing import Dict, Any, List, Optional
 from datetime import datetime
 from langchain_openai import ChatOpenAI
 from langchain.schema import HumanMessage, AIMessage
-from loguru import logger
+
 from .agent_states import AgentState
 from .mcp_manager import MCPManager
 
@@ -126,16 +126,20 @@ class BaseAgent(ABC):
             
             # 记录开始执行
             if progress_tracker:
-                progress_tracker.log_agent_start(self.agent_name, {
-                    "user_message_length": len(user_message),
-                    "mcp_enabled": self.mcp_enabled,
-                    "available_tools_count": len(self.available_tools) if self.available_tools else 0
-                })
+                if hasattr(progress_tracker, 'start_agent'):
+                    # 新的ProgressManager接口
+                    progress_tracker.start_agent(self.agent_name, f"分析: {user_message[:50]}...")
+                elif hasattr(progress_tracker, 'log_agent_start'):
+                    # 旧的ProgressTracker接口（兼容性）
+                    progress_tracker.log_agent_start(self.agent_name, {
+                        "user_message_length": len(user_message),
+                        "mcp_enabled": self.mcp_enabled,
+                        "available_tools_count": len(self.available_tools) if self.available_tools else 0
+                    })
             
-            # 详细日志：开始分析
-            logger.info(f"🤖 [{self.agent_name}] 开始分析...")
-            logger.info(f"📝 [{self.agent_name}] 分析请求: {user_message[:100]}{'...' if len(user_message) > 100 else ''}")
-            
+            # 开始分析
+            print(f"🤖 [{self.agent_name}] 开始分析...")
+
             # 构建系统提示和上下文（不包含工具描述，因为智能体已经预先绑定了工具）
             system_prompt = self.get_system_prompt(state)
             context_prompt = self.build_context_prompt(state)
@@ -148,15 +152,9 @@ class BaseAgent(ABC):
             # 动态获取当前可用工具
             current_tools = self.mcp_manager.get_tools_for_agent(self.agent_name) if self.mcp_enabled else []
 
-            # 详细日志：显示工具状态
-            if self.mcp_enabled and current_tools:
-                logger.info(f"🔧 [{self.agent_name}] 可用工具: {[tool.name for tool in current_tools]}")
-            else:
-                logger.info(f"🔧 [{self.agent_name}] 无外部工具，使用纯LLM分析")
-
             # 如果启用了MCP工具，使用智能体（参考test.py的简洁方式）
             if self.mcp_enabled and current_tools:
-                logger.info(f"⚡ [{self.agent_name}] 正在调用LLM（带MCP工具）...")
+                print(f"⚡ [{self.agent_name}] 正在调用LLM（带MCP工具）...")
                 
                 # 构建简单的消息列表，让框架自动处理工具绑定
                 messages = [
@@ -181,7 +179,7 @@ class BaseAgent(ABC):
                     result = "(未收到消息)"
             else:
                 # 如果没有启用MCP工具，直接调用LLM
-                logger.info(f"⚡ [{self.agent_name}] 正在调用LLM（无工具）...")
+                print(f"⚡ [{self.agent_name}] 正在调用LLM（无工具）...")
                 full_prompt = f"""{system_level_prompt}\n\n用户请求: {user_message}"""
                 response = await self.llm.ainvoke([HumanMessage(content=full_prompt)])
                 result = response.content
@@ -189,12 +187,7 @@ class BaseAgent(ABC):
                 
                 # 检查最终响应中是否包含工具调用
                 if hasattr(response, 'tool_calls') and response.tool_calls:
-                    logger.info(f"🔧 [{self.agent_name}] LLM响应包含 {len(response.tool_calls)} 个新的工具调用")
-                    for i, tool_call in enumerate(response.tool_calls, 1):
-                        tool_name = tool_call.get('name', 'unknown')
-                        tool_args = tool_call.get('args', {})
-                        logger.info(f"🆕 [{self.agent_name}] 新工具调用 {i}: {tool_name}")
-                        logger.info(f"📝 [{self.agent_name}] 新工具参数: {tool_args}")
+                    print(f"🔧 [{self.agent_name}] LLM响应包含 {len(response.tool_calls)} 个新的工具调用")
                 
                 # 记录工具使用
                 if isinstance(state, dict):
@@ -233,44 +226,44 @@ class BaseAgent(ABC):
                         mcp_used=False
                     )
             
-            # 详细日志：显示完整的分析结果
-            logger.info(f"✅ [{self.agent_name}] 分析完成")
-            logger.info(f"📊 [{self.agent_name}] 分析结果长度: {len(result)} 字符")
-            logger.info(f"📋 [{self.agent_name}] ===== 分析结果 =====")
-            # 将长文本分段显示，每段最多500字符
-            content_lines = result.split('\n')
-            current_chunk = ""
-            for line in content_lines:
-                if len(current_chunk + line) > 500:
-                    if current_chunk:
-                        logger.info(f"📄 [{self.agent_name}] {current_chunk}")
-                    current_chunk = line
-                else:
-                    current_chunk += ("\n" if current_chunk else "") + line
-            if current_chunk:
-                logger.info(f"📄 [{self.agent_name}] {current_chunk}")
-            logger.info(f"📋 [{self.agent_name}] ===== 分析结果结束 =====")
+            # 显示分析结果
+            print(f"✅ [{self.agent_name}] 分析完成，结果长度: {len(result)} 字符")
             
             # 记录执行完成
             if progress_tracker:
-                progress_tracker.log_agent_complete(self.agent_name, result, {
-                    "result_length": len(result),
-                    "success": True,
-                    "mcp_used": self.mcp_enabled and self.available_tools
-                })
+                if hasattr(progress_tracker, 'complete_agent'):
+                    # 新的ProgressManager接口
+                    progress_tracker.complete_agent(self.agent_name, True, {
+                        "result": result,
+                        "result_length": len(result),
+                        "mcp_used": self.mcp_enabled and self.available_tools
+                    })
+                elif hasattr(progress_tracker, 'log_agent_complete'):
+                    # 旧的ProgressTracker接口（兼容性）
+                    progress_tracker.log_agent_complete(self.agent_name, result, {
+                        "result_length": len(result),
+                        "success": True,
+                        "mcp_used": self.mcp_enabled and self.available_tools
+                    })
             
             return result
             
         except Exception as e:
             error_msg = f"LLM调用失败: {str(e)}"
-            logger.error(f"智能体 {self.agent_name} - {error_msg}")
+            print(f"❌ 智能体 {self.agent_name} - {error_msg}")
             
             # 记录执行失败
             if progress_tracker:
-                progress_tracker.log_agent_complete(self.agent_name, error_msg, {
-                    "error": error_msg,
-                    "success": False
-                })
+                if hasattr(progress_tracker, 'complete_agent'):
+                    # 新的ProgressManager接口
+                    progress_tracker.complete_agent(self.agent_name, False)
+                    progress_tracker.add_error(self.agent_name, error_msg)
+                elif hasattr(progress_tracker, 'log_agent_complete'):
+                    # 旧的ProgressTracker接口（兼容性）
+                    progress_tracker.log_agent_complete(self.agent_name, error_msg, {
+                        "error": error_msg,
+                        "success": False
+                    })
             
             if isinstance(state, dict):
                 if 'errors' not in state:
@@ -294,8 +287,7 @@ class BaseAgent(ABC):
             return {"error": error_msg}
         
         try:
-            logger.info(f"🔧 [{self.agent_name}] 准备调用工具: {tool_name}")
-            logger.info(f"📝 [{self.agent_name}] 工具参数: {tool_args}")
+            print(f"🔧 [{self.agent_name}] 准备调用工具: {tool_name}")
             
             result = await self.mcp_manager.call_tool_for_agent(
                 agent_name=self.agent_name,
@@ -321,28 +313,15 @@ class BaseAgent(ABC):
                     tool_result=result
                 )
             
-            # 显示详细的工具调用结果
+            # 显示工具调用结果
             result_str = str(result)
-            logger.info(f"✅ [{self.agent_name}] 工具 {tool_name} 调用成功")
-            logger.info(f"📏 [{self.agent_name}] 工具返回结果长度: {len(result_str)} 字符")
-            
-            # 分段显示完整结果
-            if len(result_str) > 1000:
-                logger.info(f"📊 [{self.agent_name}] ===== 工具 {tool_name} 返回结果 =====")
-                # 将长文本分段显示，每段最多800字符
-                for i in range(0, len(result_str), 800):
-                    chunk = result_str[i:i+800]
-                    chunk_num = i // 800 + 1
-                    logger.info(f"📄 [{self.agent_name}] 结果片段 {chunk_num}: {chunk}")
-                logger.info(f"📊 [{self.agent_name}] ===== 工具结果结束 =====")
-            else:
-                logger.info(f"📊 [{self.agent_name}] 工具返回完整结果: {result_str}")
+            print(f"✅ [{self.agent_name}] 工具 {tool_name} 调用成功，结果长度: {len(result_str)} 字符")
             
             return result
             
         except Exception as e:
             error_msg = f"MCP工具调用失败: {str(e)}"
-            logger.error(f"❌ [{self.agent_name}] {error_msg}")
+            print(f"❌ [{self.agent_name}] {error_msg}")
             if isinstance(state, dict):
                 if 'errors' not in state:
                     state['errors'] = []

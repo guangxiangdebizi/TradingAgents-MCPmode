@@ -1,5 +1,5 @@
 from typing import Dict, Any
-from loguru import logger
+
 from ..base_agent import BaseAgent
 from ..agent_states import AgentState
 from ..mcp_manager import MCPManager
@@ -45,7 +45,7 @@ class ResearchManager(BaseAgent):
         """执行投资决策"""
         # 处理状态可能是字典或AgentState对象的情况
         user_query = state.get('user_query', '') if isinstance(state, dict) else state.user_query
-        logger.info(f"研究经理开始决策 - 用户问题: {user_query}")
+
         
         if not self.validate_state(state):
             return state
@@ -87,11 +87,11 @@ class ResearchManager(BaseAgent):
             else:
                 state.investment_plan = formatted_decision
             
-            logger.info("研究经理完成投资决策")
+
             
         except Exception as e:
             error_msg = f"投资决策失败: {str(e)}"
-            logger.error(error_msg)
+            print(f"❌ {error_msg}")
             if isinstance(state, dict):
                 if 'errors' not in state:
                     state['errors'] = []
@@ -146,7 +146,7 @@ class Trader(BaseAgent):
         """执行交易计划制定"""
         # 处理状态可能是字典或AgentState对象的情况
         user_query = state.get('user_query', '') if isinstance(state, dict) else state.user_query
-        logger.info(f"交易员开始制定交易计划 - 用户问题: {user_query}")
+
         
         if not self.validate_state(state):
             return state
@@ -187,11 +187,11 @@ class Trader(BaseAgent):
             else:
                 state.trader_investment_plan = formatted_plan
             
-            logger.info("交易员完成交易计划制定")
+
             
         except Exception as e:
             error_msg = f"交易计划制定失败: {str(e)}"
-            logger.error(error_msg)
+            print(f"❌ {error_msg}")
             if isinstance(state, dict):
                 if 'errors' not in state:
                     state['errors'] = []

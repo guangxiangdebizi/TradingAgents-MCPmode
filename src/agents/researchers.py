@@ -1,5 +1,5 @@
 from typing import Dict, Any
-from loguru import logger
+
 from ..base_agent import BaseAgent
 from ..agent_states import AgentState
 from ..mcp_manager import MCPManager
@@ -42,8 +42,6 @@ class BullResearcher(BaseAgent):
         """执行看涨研究分析"""
         # 处理状态可能是字典或AgentState对象的情况
         user_query = state.get('user_query', '') if isinstance(state, dict) else state.user_query
-        logger.info(f"看涨研究员开始分析 - 用户问题: {user_query}")
-        
         if not self.validate_state(state):
             return state
         
@@ -108,11 +106,9 @@ class BullResearcher(BaseAgent):
             else:
                 state.investment_debate_state = new_investment_debate_state
             
-            logger.info(f"看涨研究员完成第{count+1}轮论证")
-            
         except Exception as e:
             error_msg = f"看涨研究分析失败: {str(e)}"
-            logger.error(error_msg)
+            print(f"❌ {error_msg}")
             if isinstance(state, dict):
                 if 'errors' not in state:
                     state['errors'] = []
@@ -160,8 +156,6 @@ class BearResearcher(BaseAgent):
         """执行看跌研究分析"""
         # 处理状态可能是字典或AgentState对象的情况
         user_query = state.get('user_query', '') if isinstance(state, dict) else state.user_query
-        logger.info(f"看跌研究员开始分析 - 用户问题: {user_query}")
-        
         if not self.validate_state(state):
             return state
         
@@ -226,11 +220,9 @@ class BearResearcher(BaseAgent):
             else:
                 state.investment_debate_state = new_investment_debate_state
             
-            logger.info(f"看跌研究员完成第{count+1}轮论证")
-            
         except Exception as e:
             error_msg = f"看跌研究分析失败: {str(e)}"
-            logger.error(error_msg)
+            print(f"❌ {error_msg}")
             if isinstance(state, dict):
                 if 'errors' not in state:
                     state['errors'] = []

@@ -1,9 +1,9 @@
 from typing import Dict, Any
-from loguru import logger
+
 from ..base_agent import BaseAgent
 from ..agent_states import AgentState
 from ..mcp_manager import MCPManager
-
+from datetime import datetime
 
 class MarketAnalyst(BaseAgent):
     """市场分析师 - 负责整体市场趋势分析"""
@@ -45,7 +45,7 @@ class MarketAnalyst(BaseAgent):
         """执行市场分析"""
         # 处理状态可能是字典或AgentState对象的情况
         user_query = state.get('user_query', '') if isinstance(state, dict) else state.user_query
-        logger.info(f"开始执行市场分析 - 用户问题: {user_query}")
+        print(f"🔍 开始执行市场分析 - 用户问题: {user_query}")
         
         if not self.validate_state(state):
             return state
@@ -78,11 +78,11 @@ class MarketAnalyst(BaseAgent):
             else:
                 state.market_report = formatted_result
             
-            logger.info("市场分析完成")
+            print("✅ 市场分析完成")
             
         except Exception as e:
             error_msg = f"市场分析失败: {str(e)}"
-            logger.error(error_msg)
+            print(f"❌ {error_msg}")
             if isinstance(state, dict):
                 if 'errors' not in state:
                     state['errors'] = []
@@ -135,7 +135,7 @@ class SentimentAnalyst(BaseAgent):
         """执行情绪分析"""
         # 处理状态可能是字典或AgentState对象的情况
         user_query = state.get('user_query', '') if isinstance(state, dict) else state.user_query
-        logger.info(f"开始执行情绪分析 - 用户问题: {user_query}")
+        print(f"😊 开始执行情绪分析 - 用户问题: {user_query}")
         
         if not self.validate_state(state):
             return state
@@ -164,11 +164,11 @@ class SentimentAnalyst(BaseAgent):
             else:
                 state.sentiment_report = formatted_result
             
-            logger.info("情绪分析完成")
+            print("✅ 情绪分析完成")
             
         except Exception as e:
             error_msg = f"情绪分析失败: {str(e)}"
-            logger.error(error_msg)
+            print(f"❌ {error_msg}")
             if isinstance(state, dict):
                 if 'errors' not in state:
                     state['errors'] = []
@@ -221,7 +221,7 @@ class NewsAnalyst(BaseAgent):
         """执行新闻分析"""
         # 处理状态可能是字典或AgentState对象的情况
         user_query = state.get('user_query', '') if isinstance(state, dict) else state.user_query
-        logger.info(f"开始执行新闻分析 - 用户问题: {user_query}")
+        print(f"📰 开始执行新闻分析 - 用户问题: {user_query}")
         
         if not self.validate_state(state):
             return state
@@ -250,11 +250,11 @@ class NewsAnalyst(BaseAgent):
             else:
                 state.news_report = formatted_result
             
-            logger.info("新闻分析完成")
+            print("✅ 新闻分析完成")
             
         except Exception as e:
             error_msg = f"新闻分析失败: {str(e)}"
-            logger.error(error_msg)
+            print(f"❌ {error_msg}")
             if isinstance(state, dict):
                 if 'errors' not in state:
                     state['errors'] = []
@@ -285,6 +285,7 @@ class FundamentalsAnalyst(BaseAgent):
 - 必须使用可用的外部工具获取最新的财务数据和公司信息
 - 不要依赖过时的历史知识，要基于当前最新财务数据分析
 - 在开始分析前，先使用工具获取相关公司的最新财务报表和指标
+现在的日期是：{datetime.datetime.now().strftime("%Y-%m-%d")}请你获取对应的这两年的财报之类的数据，包括收入、利润、资产负债表、现金流量表等。
 
 你的职责包括：
 1. 使用工具获取公司的最新财务报表和关键财务指标
@@ -307,7 +308,7 @@ class FundamentalsAnalyst(BaseAgent):
         """执行基本面分析"""
         # 处理状态可能是字典或AgentState对象的情况
         user_query = state.get('user_query', '') if isinstance(state, dict) else state.user_query
-        logger.info(f"开始执行基本面分析 - 用户问题: {user_query}")
+        print(f"📊 开始执行基本面分析 - 用户问题: {user_query}")
         
         if not self.validate_state(state):
             return state
@@ -336,11 +337,11 @@ class FundamentalsAnalyst(BaseAgent):
             else:
                 state.fundamentals_report = formatted_result
             
-            logger.info("基本面分析完成")
+            print("✅ 基本面分析完成")
             
         except Exception as e:
             error_msg = f"基本面分析失败: {str(e)}"
-            logger.error(error_msg)
+            print(f"❌ {error_msg}")
             if isinstance(state, dict):
                 if 'errors' not in state:
                     state['errors'] = []

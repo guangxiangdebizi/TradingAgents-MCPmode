@@ -4,7 +4,7 @@ import markdown
 from datetime import datetime
 import os
 from pathlib import Path
-from loguru import logger
+
 
 try:
     from docx import Document
@@ -27,7 +27,7 @@ class ReportGenerator:
     """报告生成器 - 支持将JSON数据转换为多种格式的报告"""
     
     def __init__(self):
-        self.supported_formats = ['markdown', 'md']
+        self.supported_formats = ['markdown', 'md', 'html']
         if DOCX_AVAILABLE:
             self.supported_formats.extend(['docx', 'word'])
         if PDF_AVAILABLE:
@@ -60,6 +60,8 @@ class ReportGenerator:
         # 根据格式生成文件
         if output_format.lower() in ['markdown', 'md']:
             return self._save_markdown(markdown_content, output_path)
+        elif output_format.lower() == 'html':
+            return self._save_html(markdown_content, output_path, title)
         elif output_format.lower() in ['docx', 'word'] and DOCX_AVAILABLE:
             return self._save_docx(markdown_content, output_path, title)
         elif output_format.lower() == 'pdf' and PDF_AVAILABLE:
@@ -207,8 +209,281 @@ class ReportGenerator:
         """保存markdown文件"""
         with open(output_path, 'w', encoding='utf-8') as f:
             f.write(content)
-        logger.info(f"Markdown报告已保存到: {output_path}")
+        print(f"📄 Markdown报告已保存到: {output_path}")
         return output_path
+    
+    def _save_html(self, markdown_content: str, output_path: str, title: str) -> str:
+        """保存HTML文件"""
+        # 将markdown转换为HTML
+        html_body = markdown.markdown(markdown_content, extensions=['tables', 'fenced_code'])
+        
+        # 创建完整的HTML文档
+        html_template = self._get_html_template(title)
+        full_html = html_template.replace('{{{{CONTENT}}}}', html_body)
+        
+        with open(output_path, 'w', encoding='utf-8') as f:
+            f.write(full_html)
+        print(f"🌐 HTML报告已保存到: {output_path}")
+        return output_path
+    
+    def _get_html_template(self, title: str) -> str:
+        """获取HTML模板"""
+        return f'''
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{title}</title>
+    <style>
+        * {{
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }}
+        
+        body {{
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }}
+        
+        .container {{
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }}
+        
+        .header {{
+            background: linear-gradient(135deg, #2c3e50 0%, #3498db 100%);
+            color: white;
+            padding: 40px;
+            text-align: center;
+        }}
+        
+        .header h1 {{
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            font-weight: 300;
+        }}
+        
+        .header .timestamp {{
+            opacity: 0.8;
+            font-size: 1.1em;
+        }}
+        
+        .content {{
+            padding: 40px;
+        }}
+        
+        h1, h2, h3, h4, h5, h6 {{
+            margin-top: 30px;
+            margin-bottom: 15px;
+            color: #2c3e50;
+        }}
+        
+        h1 {{
+            font-size: 2.2em;
+            border-bottom: 3px solid #3498db;
+            padding-bottom: 10px;
+        }}
+        
+        h2 {{
+            font-size: 1.8em;
+            color: #e74c3c;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }}
+        
+        h2:before {{
+            content: "";
+            width: 4px;
+            height: 30px;
+            background: #e74c3c;
+            border-radius: 2px;
+        }}
+        
+        h3 {{
+            font-size: 1.4em;
+            color: #8e44ad;
+        }}
+        
+        p {{
+            margin-bottom: 15px;
+            text-align: justify;
+        }}
+        
+        strong {{
+            color: #2c3e50;
+            font-weight: 600;
+        }}
+        
+        ul, ol {{
+            margin-left: 30px;
+            margin-bottom: 15px;
+        }}
+        
+        li {{
+            margin-bottom: 8px;
+        }}
+        
+        code {{
+            background: #f8f9fa;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+            color: #e74c3c;
+        }}
+        
+        pre {{
+            background: #2c3e50;
+            color: #ecf0f1;
+            padding: 20px;
+            border-radius: 8px;
+            overflow-x: auto;
+            margin: 20px 0;
+            border-left: 4px solid #3498db;
+        }}
+        
+        pre code {{
+            background: none;
+            color: inherit;
+            padding: 0;
+        }}
+        
+        blockquote {{
+            border-left: 4px solid #3498db;
+            padding-left: 20px;
+            margin: 20px 0;
+            background: #f8f9fa;
+            padding: 15px 20px;
+            border-radius: 0 8px 8px 0;
+        }}
+        
+        table {{
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            background: white;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }}
+        
+        th, td {{
+            padding: 12px 15px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }}
+        
+        th {{
+            background: #3498db;
+            color: white;
+            font-weight: 600;
+        }}
+        
+        tr:hover {{
+            background: #f5f5f5;
+        }}
+        
+        .section {{
+            margin: 30px 0;
+            padding: 25px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            border-left: 5px solid #3498db;
+        }}
+        
+        .error-section {{
+            border-left-color: #e74c3c;
+            background: #fdf2f2;
+        }}
+        
+        .warning-section {{
+            border-left-color: #f39c12;
+            background: #fef9e7;
+        }}
+        
+        .success-section {{
+            border-left-color: #27ae60;
+            background: #f0f9f4;
+        }}
+        
+        .footer {{
+            background: #34495e;
+            color: white;
+            text-align: center;
+            padding: 20px;
+            font-size: 0.9em;
+        }}
+        
+        @media (max-width: 768px) {{
+            body {{
+                padding: 10px;
+            }}
+            
+            .header {{
+                padding: 20px;
+            }}
+            
+            .header h1 {{
+                font-size: 2em;
+            }}
+            
+            .content {{
+                padding: 20px;
+            }}
+            
+            h2 {{
+                font-size: 1.5em;
+            }}
+        }}
+        
+        .highlight {{
+            background: linear-gradient(120deg, #a8edea 0%, #fed6e3 100%);
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-weight: 500;
+        }}
+        
+        .badge {{
+            display: inline-block;
+            padding: 4px 8px;
+            background: #3498db;
+            color: white;
+            border-radius: 12px;
+            font-size: 0.8em;
+            margin-right: 5px;
+        }}
+        
+        .badge.success {{ background: #27ae60; }}
+        .badge.warning {{ background: #f39c12; }}
+        .badge.error {{ background: #e74c3c; }}
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>{title}</h1>
+            <div class="timestamp">生成时间: {datetime.now().strftime('%Y年%m月%d日 %H:%M:%S')}</div>
+        </div>
+        <div class="content">
+            {{{{CONTENT}}}}
+        </div>
+        <div class="footer">
+            <p>📊 TradingAgents-MCPmode 智能交易分析系统 | 🤖 多智能体协作分析报告</p>
+        </div>
+    </div>
+</body>
+</html>
+        '''
     
     def _save_docx(self, markdown_content: str, output_path: str, title: str) -> str:
         """保存DOCX文件"""
