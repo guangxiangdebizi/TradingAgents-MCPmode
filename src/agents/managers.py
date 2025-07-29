@@ -1,4 +1,5 @@
 from typing import Dict, Any
+from datetime import datetime
 
 from ..base_agent import BaseAgent
 from ..agent_states import AgentState
@@ -16,8 +17,11 @@ class ResearchManager(BaseAgent):
         )
     
     def get_system_prompt(self, state: AgentState) -> str:
+        current_datetime = datetime.now()
         return f"""
 你是一位资深的投资组合经理和研究主管，负责评估研究团队的辩论结果并做出最终的投资决策。
+
+当前时间：{current_datetime.strftime('%Y年%m月%d日 %H:%M:%S')} ({current_datetime.strftime('%A')})
 
 你的职责：
 1. 客观评估看涨和看跌研究员的论证质量
@@ -115,8 +119,11 @@ class Trader(BaseAgent):
         )
     
     def get_system_prompt(self, state: AgentState) -> str:
+        current_datetime = datetime.now()
         return f"""
 你是一位专业的交易员，负责将投资决策转化为具体的交易执行计划。
+
+当前时间：{current_datetime.strftime('%Y年%m月%d日 %H:%M:%S')} ({current_datetime.strftime('%A')})
 
 你的职责：
 1. 基于研究经理的投资决策制定交易计划

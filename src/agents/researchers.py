@@ -1,4 +1,5 @@
 from typing import Dict, Any
+from datetime import datetime
 
 from ..base_agent import BaseAgent
 from ..agent_states import AgentState
@@ -18,8 +19,11 @@ class BullResearcher(BaseAgent):
     def get_system_prompt(self, state: AgentState) -> str:
         # 处理状态可能是字典或AgentState对象的情况
         user_query = state.get('user_query', '') if isinstance(state, dict) else state.user_query
+        current_datetime = datetime.now()
         return f"""
 你是一位专业的看涨研究员，负责为用户问题 "{user_query}" 构建强有力的看涨投资论证。
+
+当前时间：{current_datetime.strftime('%Y年%m月%d日 %H:%M:%S')} ({current_datetime.strftime('%A')})
 
 你的职责：
 1. 基于所有可用的分析报告，构建看涨案例
@@ -132,8 +136,11 @@ class BearResearcher(BaseAgent):
     def get_system_prompt(self, state: AgentState) -> str:
         # 处理状态可能是字典或AgentState对象的情况
         user_query = state.get('user_query', '') if isinstance(state, dict) else state.user_query
+        current_datetime = datetime.now()
         return f"""
 你是一位专业的看跌研究员，负责为用户问题 "{user_query}" 识别投资风险和构建看跌论证。
+
+当前时间：{current_datetime.strftime('%Y年%m月%d日 %H:%M:%S')} ({current_datetime.strftime('%A')})
 
 你的职责：
 1. 基于所有可用的分析报告，识别投资风险

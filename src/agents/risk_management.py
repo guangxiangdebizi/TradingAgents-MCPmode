@@ -1,4 +1,5 @@
 from typing import Dict, Any
+from datetime import datetime
 
 from ..base_agent import BaseAgent
 from ..agent_states import AgentState
@@ -16,8 +17,11 @@ class AggressiveRiskAnalyst(BaseAgent):
         )
     
     def get_system_prompt(self, state: AgentState) -> str:
+        current_datetime = datetime.now()
         return f"""
 你是一位激进的风险分析师，倾向于承担较高风险以追求更高的投资回报。
+
+当前时间：{current_datetime.strftime('%Y年%m月%d日 %H:%M:%S')} ({current_datetime.strftime('%A')})
 
 你的观点特征：
 1. 相信高风险高回报的投资哲学
@@ -148,8 +152,11 @@ class SafeRiskAnalyst(BaseAgent):
         )
     
     def get_system_prompt(self, state: AgentState) -> str:
+        current_datetime = datetime.now()
         return f"""
 你是一位保守的风险分析师，优先考虑资本保护和风险控制。
+
+当前时间：{current_datetime.strftime('%Y年%m月%d日 %H:%M:%S')} ({current_datetime.strftime('%A')})
 
 你的观点特征：
 1. 资本保护优先于收益追求
@@ -260,8 +267,11 @@ class NeutralRiskAnalyst(BaseAgent):
         )
     
     def get_system_prompt(self, state: AgentState) -> str:
+        current_datetime = datetime.now()
         return f"""
 你是一位中性的风险分析师，致力于平衡风险和收益的考量。
+
+当前时间：{current_datetime.strftime('%Y年%m月%d日 %H:%M:%S')} ({current_datetime.strftime('%A')})
 
 你的观点特征：
 1. 客观平衡风险和收益
@@ -372,8 +382,11 @@ class RiskManager(BaseAgent):
         )
     
     def get_system_prompt(self, state: AgentState) -> str:
+        current_datetime = datetime.now()
         return f"""
 你是一位资深的风险管理经理，负责评估风险团队的辩论结果并做出最终的风险管理决策。
+
+当前时间：{current_datetime.strftime('%Y年%m月%d日 %H:%M:%S')} ({current_datetime.strftime('%A')})
 
 你的职责：
 1. 综合评估激进、保守、中性三方的风险观点

@@ -103,6 +103,10 @@ class MCPManager:
     async def initialize(self, mcp_config: Optional[Dict] = None) -> bool:
         """初始化MCP客户端和工具"""
         try:
+            # 如果已经有客户端，先关闭
+            if self.client:
+                await self.close()
+            
             # 使用配置创建MCP客户端
             config = mcp_config or self.config.get("servers", {})
             if not config:
@@ -122,6 +126,10 @@ class MCPManager:
             
         except Exception as e:
             print(f"❌ MCP客户端初始化失败: {e}")
+            # 确保清理状态
+            self.client = None
+            self.tools = []
+            self.tools_by_server = {}
             return False
     
     async def _organize_tools_by_server(self) -> Dict[str, List]:
@@ -147,6 +155,11 @@ class MCPManager:
         # 检查权限
         if not self.agent_permissions.get(agent_name, False):
             print(f"智能体 {agent_name} 未被授权使用MCP工具")
+            return []
+        
+        # 检查客户端连接状态
+        if not self.client or not self.tools:
+            print(f"智能体 {agent_name} - MCP客户端未连接或无可用工具")
             return []
         
         # 返回所有可用工具
@@ -227,6 +240,12 @@ class MCPManager:
             print(f"⚠️ {error_msg}")
             return {"error": error_msg}
         
+        # 检查客户端连接状态
+        if not self.client:
+            error_msg = "MCP客户端未初始化或连接已断开"
+            print(f"❌ {error_msg}")
+            return {"error": error_msg}
+        
         # 查找工具
         target_tool = None
         for tool in self.tools:
@@ -247,6 +266,12 @@ class MCPManager:
         except Exception as e:
             error_msg = f"工具调用失败: {e}"
             print(f"❌ {error_msg}")
+            # 如果是连接错误，清理客户端状态
+            if "BrokenResourceError" in str(e) or "connection" in str(e).lower():
+                print("🔄 检测到连接错误，清理MCP客户端状态")
+                self.client = None
+                self.tools = []
+                self.tools_by_server = {}
             return {"error": error_msg}
     
     async def close(self):
@@ -259,8 +284,16 @@ class MCPManager:
                     print("MCP连接已关闭")
                 else:
                     print("MCP客户端无需显式关闭")
+                # 清理客户端引用
+                self.client = None
+                self.tools = []
+                self.tools_by_server = {}
             except Exception as e:
                 print(f"❌ 关闭MCP连接时出错: {e}")
+                # 即使出错也要清理引用
+                self.client = None
+                self.tools = []
+                self.tools_by_server = {}
     
     def is_agent_mcp_enabled(self, agent_name: str) -> bool:
         """检查智能体是否启用了MCP工具"""

@@ -153,30 +153,38 @@ class BaseAgent(ABC):
             current_tools = self.mcp_manager.get_tools_for_agent(self.agent_name) if self.mcp_enabled else []
 
             # 如果启用了MCP工具，使用智能体（参考test.py的简洁方式）
-            if self.mcp_enabled and current_tools:
+            if self.mcp_enabled and current_tools and self.mcp_manager.client:
                 print(f"⚡ [{self.agent_name}] 正在调用LLM（带MCP工具）...")
                 
-                # 构建简单的消息列表，让框架自动处理工具绑定
-                messages = [
-                    {"role": "system", "content": system_level_prompt},
-                    {"role": "user", "content": user_message}
-                ]
+                try:
+                    # 构建简单的消息列表，让框架自动处理工具绑定
+                    messages = [
+                        {"role": "system", "content": system_level_prompt},
+                        {"role": "user", "content": user_message}
+                    ]
 
-                response = await self.agent.ainvoke({
-                    "messages": messages
-                })
-                
-                # 提取最终回复
-                messages = response.get("messages", [])
-                if messages:
-                    # 通常最后一个消息是最终的AI回复
-                    final_message = messages[-1]
-                    if hasattr(final_message, 'content'):
-                        result = final_message.content
+                    response = await self.agent.ainvoke({
+                        "messages": messages
+                    })
+                    
+                    # 提取最终回复
+                    messages = response.get("messages", [])
+                    if messages:
+                        # 通常最后一个消息是最终的AI回复
+                        final_message = messages[-1]
+                        if hasattr(final_message, 'content'):
+                            result = final_message.content
+                        else:
+                            result = "(无法提取内容)"
                     else:
-                        result = "(无法提取内容)"
-                else:
-                    result = "(未收到消息)"
+                        result = "(未收到消息)"
+                        
+                except Exception as mcp_error:
+                    print(f"⚠️ [{self.agent_name}] MCP工具调用失败，回退到无工具模式: {mcp_error}")
+                    # 回退到无工具模式
+                    full_prompt = f"""{system_level_prompt}\n\n用户请求: {user_message}"""
+                    response = await self.llm.ainvoke([HumanMessage(content=full_prompt)])
+                    result = response.content
             else:
                 # 如果没有启用MCP工具，直接调用LLM
                 print(f"⚡ [{self.agent_name}] 正在调用LLM（无工具）...")

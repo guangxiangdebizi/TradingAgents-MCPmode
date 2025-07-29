@@ -16,8 +16,11 @@ class MarketAnalyst(BaseAgent):
         )
     
     def get_system_prompt(self, state: AgentState) -> str:
+        current_datetime = datetime.now()
         return f"""
 你是一位资深的市场分析师，专门负责分析股票市场的整体趋势和技术指标。
+
+当前时间：{current_datetime.strftime('%Y年%m月%d日 %H:%M:%S')} ({current_datetime.strftime('%A')})
 
 重要工作原则：
 - 必须使用可用的外部工具获取最新的实时数据
@@ -106,8 +109,11 @@ class SentimentAnalyst(BaseAgent):
         )
     
     def get_system_prompt(self, state: AgentState) -> str:
+        current_datetime = datetime.now()
         return f"""
 你是一位专业的市场情绪分析师，专门分析社交媒体、新闻评论和投资者情绪。
+
+当前时间：{current_datetime.strftime('%Y年%m月%d日 %H:%M:%S')} ({current_datetime.strftime('%A')})
 
 重要工作原则：
 - 必须使用可用的外部工具获取最新的市场情绪数据
@@ -192,8 +198,11 @@ class NewsAnalyst(BaseAgent):
         )
     
     def get_system_prompt(self, state: AgentState) -> str:
+        current_datetime = datetime.now()
         return f"""
 你是一位专业的新闻分析师，专门分析影响股票价格的新闻事件和信息。
+
+当前时间：{current_datetime.strftime('%Y年%m月%d日 %H:%M:%S')} ({current_datetime.strftime('%A')})
 
 重要工作原则：
 - 必须使用可用的外部工具获取最新的新闻信息和市场数据
@@ -278,8 +287,11 @@ class FundamentalsAnalyst(BaseAgent):
         )
     
     def get_system_prompt(self, state: AgentState) -> str:
+        current_datetime = datetime.now()
         return f"""
 你是一位资深的基本面分析师，专门分析公司的财务状况和内在价值。
+
+当前时间：{current_datetime.strftime('%Y年%m月%d日 %H:%M:%S')} ({current_datetime.strftime('%A')})
 
 重要工作原则：
 - 必须使用可用的外部工具获取最新的财务数据和公司信息
