@@ -2,7 +2,7 @@ import json
 import os
 from datetime import datetime
 from typing import Dict, Any, List, Optional
-from loguru import logger
+# from loguru import logger  # 已移除
 
 
 class DataPersistence:
@@ -36,7 +36,7 @@ class DataPersistence:
         }
         
         self._save_session()
-        logger.info(f"📁 数据持久化管理器初始化完成，会话ID: {self.session_id}")
+        print(f"📁 数据持久化管理器初始化完成，会话ID: {self.session_id}")
     
     def _save_session(self):
         """保存会话数据到JSON文件"""
@@ -45,7 +45,7 @@ class DataPersistence:
             with open(self.session_file, 'w', encoding='utf-8') as f:
                 json.dump(self.session_data, f, ensure_ascii=False, indent=2)
         except Exception as e:
-            logger.error(f"保存会话数据失败: {e}")
+            print(f"❌ 保存会话数据失败: {e}")
     
     def save_agent_result(self, agent_name: str, result: Any, metadata: Dict[str, Any] = None):
         """保存智能体完整结果 - 不进行任何截断"""
@@ -76,7 +76,7 @@ class DataPersistence:
         })
         
         self._save_session()
-        logger.info(f"💾 已保存智能体 {agent_name} 的完整结果 ({len(str(result))} 字符)")
+        print(f"💾 已保存智能体 {agent_name} 的完整结果 ({len(str(result))} 字符)")
     
     def save_agent_results(self, agent_name: str, results: Dict[str, Any]):
         """保存智能体结果字典 - 兼容ProgressManager调用"""
@@ -106,7 +106,7 @@ class DataPersistence:
         })
         
         self._save_session()
-        logger.info(f"🔧 已保存MCP工具调用: {agent_name} -> {tool_name} ({len(str(tool_result))} 字符)")
+        print(f"🔧 已保存MCP工具调用: {agent_name} -> {tool_name} ({len(str(tool_result))} 字符)")
     
     def save_llm_interaction(self, agent_name: str, prompt: str, response: str, metadata: Dict[str, Any] = None):
         """保存LLM交互的完整内容"""
@@ -141,7 +141,7 @@ class DataPersistence:
         })
         
         self._save_session()
-        logger.info(f"🤖 已保存LLM交互: {agent_name} (提示: {len(prompt)} 字符, 响应: {len(response)} 字符)")
+        print(f"🤖 已保存LLM交互: {agent_name} (提示: {len(prompt)} 字符, 响应: {len(response)} 字符)")
     
     def update_agent_status(self, agent_name: str, status: str, metadata: Dict[str, Any] = None):
         """更新智能体状态"""
@@ -195,11 +195,11 @@ class DataPersistence:
         
         self._add_timeline_event("error", {
             "agent": agent_name,
-            "error_preview": error_msg[:100] + "..." if len(error_msg) > 100 else error_msg
+            "error_preview": error_msg
         })
         
         self._save_session()
-        logger.error(f"❌ 错误记录: {error_msg}")
+        print(f"❌ 错误记录: {error_msg}")
     
     def add_warning(self, warning_msg: str, agent_name: str = None, context: Dict[str, Any] = None):
         """添加警告记录"""
@@ -214,11 +214,11 @@ class DataPersistence:
         
         self._add_timeline_event("warning", {
             "agent": agent_name,
-            "warning_preview": warning_msg[:100] + "..." if len(warning_msg) > 100 else warning_msg
+            "warning_preview": warning_msg
         })
         
         self._save_session()
-        logger.warning(f"⚠️ 警告记录: {warning_msg}")
+        print(f"⚠️ 警告记录: {warning_msg}")
     
     def _add_timeline_event(self, event_type: str, event_data: Dict[str, Any]):
         """添加时间线事件"""
@@ -237,11 +237,11 @@ class DataPersistence:
         self.session_data["status"] = "running"
         
         self._add_timeline_event("workflow_start", {
-            "query": user_query[:100] + "..." if len(user_query) > 100 else user_query
+            "query": user_query
         })
         
         self._save_session()
-        logger.info(f"🚀 工作流开始: {user_query[:50]}..." if len(user_query) > 50 else f"🚀 工作流开始: {user_query}")
+        print(f"🚀 工作流开始: {user_query}")
     
     def log_workflow_completion(self, success: bool = True):
         """记录工作流完成"""
@@ -253,7 +253,7 @@ class DataPersistence:
         })
         
         self._save_session()
-        logger.info(f"🏁 工作流{'成功完成' if success else '执行失败'}")
+        print(f"🏁 工作流{'成功完成' if success else '执行失败'}")
     
     def log_agent_start(self, agent_name: str, action: str = ""):
         """记录智能体开始工作"""
@@ -278,7 +278,7 @@ class DataPersistence:
         })
         
         self._save_session()
-        logger.info(f"🤖 智能体开始工作: {agent_name} - {action}" if action else f"🤖 智能体开始工作: {agent_name}")
+        print(f"🤖 智能体开始工作: {agent_name} - {action}" if action else f"🤖 智能体开始工作: {agent_name}")
     
     def log_agent_complete(self, agent_name: str, success: bool = True):
         """记录智能体完成工作"""
@@ -292,7 +292,7 @@ class DataPersistence:
         })
         
         self._save_session()
-        logger.info(f"✅ 智能体{'成功完成' if success else '执行失败'}: {agent_name}")
+        print(f"✅ 智能体{'成功完成' if success else '执行失败'}: {agent_name}")
     
     def add_agent_action(self, agent_name: str, action: str, details: Optional[Dict[str, Any]] = None):
         """添加智能体行动记录"""
@@ -315,7 +315,7 @@ class DataPersistence:
         
         self._add_timeline_event("agent_action", {
             "agent": agent_name,
-            "action": action[:50] + "..." if len(action) > 50 else action
+            "action": action
         })
         
         self._save_session()
@@ -335,7 +335,22 @@ class DataPersistence:
         })
         
         self._save_session()
-        logger.info(f"🎯 最终结果已设置")
+        print(f"🎯 最终结果已设置")
+    
+    def update_global_state(self, global_state_data: Dict[str, Any]):
+        """更新全局状态"""
+        if "global_state" not in self.session_data:
+            self.session_data["global_state"] = {}
+        
+        self.session_data["global_state"].update(global_state_data)
+        self.session_data["global_state"]["updated_at"] = datetime.now().isoformat()
+        
+        self._add_timeline_event("global_state_update", {
+            "update_keys": list(global_state_data.keys())
+        })
+        
+        self._save_session()
+        print(f"🌐 全局状态已更新")
     
     def update_debate_state(self, debate_type: str, debate_data: Dict[str, Any]):
         """更新辩论状态"""
@@ -354,7 +369,7 @@ class DataPersistence:
         })
         
         self._save_session()
-        logger.info(f"🗣️ 辩论状态已更新: {debate_type}")
+        print(f"🗣️ 辩论状态已更新: {debate_type}")
     
     def finalize_session(self, final_results: Dict[str, Any] = None):
         """完成会话"""
@@ -372,7 +387,7 @@ class DataPersistence:
         })
         
         self._save_session()
-        logger.info(f"🏁 会话已完成并保存: {self.session_id}")
+        print(f"🏁 会话已完成并保存: {self.session_id}")
     
     def get_session_file_path(self) -> str:
         """获取会话文件路径"""

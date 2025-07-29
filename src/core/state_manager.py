@@ -1,6 +1,6 @@
 from typing import Dict, Any, List, Optional
 from datetime import datetime
-from loguru import logger
+# from loguru import logger  # 已移除
 
 
 class StateManager:
@@ -53,7 +53,7 @@ class StateManager:
             }
         }
         
-        logger.info("📊 状态管理器初始化完成")
+        print("📊 状态管理器初始化完成")
     
     def start_workflow(self, user_query: str):
         """开始工作流"""
@@ -62,7 +62,7 @@ class StateManager:
             "start_time": datetime.now().isoformat(),
             "user_query": user_query
         })
-        logger.info(f"🚀 工作流开始: {user_query}")
+        print(f"🚀 工作流开始: {user_query}")
     
     def start_agent(self, agent_name: str, action: str = ""):
         """开始智能体工作"""
@@ -76,7 +76,7 @@ class StateManager:
             self.workflow_state["current_agent"] = agent_name
             self._update_overall_progress()
             
-            logger.info(f"🤖 智能体开始工作: {agent_name} - {action}")
+            print(f"🤖 智能体开始工作: {agent_name} - {action}")
     
     def complete_agent(self, agent_name: str, success: bool = True):
         """完成智能体工作"""
@@ -93,10 +93,10 @@ class StateManager:
             if self._all_agents_completed():
                 self.workflow_state["status"] = "completed"
                 self.workflow_state["current_agent"] = None
-                logger.info("🏁 所有智能体工作完成")
+                print("🏁 所有智能体工作完成")
             
             status_text = "成功" if success else "失败"
-            logger.info(f"✅ 智能体完成工作: {agent_name} - {status_text}")
+            print(f"✅ 智能体完成工作: {agent_name} - {status_text}")
     
     def update_agent_progress(self, agent_name: str, progress: float, action: str = ""):
         """更新智能体进度"""
@@ -122,7 +122,7 @@ class StateManager:
         if debate_type in self.debate_states:
             self.debate_states[debate_type]["active"] = True
             self.debate_states[debate_type]["round"] = 1
-            logger.info(f"🗣️ 开始{debate_type}辩论")
+            print(f"🗣️ 开始{debate_type}辩论")
     
     def next_debate_round(self, debate_type: str) -> bool:
         """进入下一轮辩论，返回是否继续"""
@@ -132,10 +132,10 @@ class StateManager:
                 debate_state["round"] += 1
                 if debate_state["round"] > debate_state["max_rounds"]:
                     debate_state["active"] = False
-                    logger.info(f"🏁 {debate_type}辩论结束")
+                    print(f"🏁 {debate_type}辩论结束")
                     return False
                 else:
-                    logger.info(f"🔄 {debate_type}辩论第{debate_state['round']}轮")
+                    print(f"🔄 {debate_type}辩论第{debate_state['round']}轮")
                     return True
         return False
     
@@ -143,7 +143,7 @@ class StateManager:
         """结束辩论"""
         if debate_type in self.debate_states:
             self.debate_states[debate_type]["active"] = False
-            logger.info(f"🏁 {debate_type}辩论结束")
+            print(f"🏁 {debate_type}辩论结束")
     
     def _update_overall_progress(self):
         """更新整体进度"""
@@ -260,7 +260,7 @@ class StateManager:
             self.debate_states[debate_type]["active"] = False
             self.debate_states[debate_type]["round"] = 0
         
-        logger.info("🔄 状态管理器已重置")
+        print("🔄 状态管理器已重置")
     
     def get_summary(self) -> Dict[str, Any]:
         """获取状态摘要"""

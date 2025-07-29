@@ -13,14 +13,14 @@ try:
     DOCX_AVAILABLE = True
 except ImportError:
     DOCX_AVAILABLE = False
-    logger.warning("python-docx not installed. DOCX export will not be available.")
+    print("⚠️ python-docx not installed. DOCX export will not be available.")
 
 try:
     import pdfkit
     PDF_AVAILABLE = True
 except ImportError:
     PDF_AVAILABLE = False
-    logger.warning("pdfkit not installed. PDF export will not be available.")
+    print("⚠️ pdfkit not installed. PDF export will not be available.")
 
 
 class ReportGenerator:
@@ -534,7 +534,7 @@ class ReportGenerator:
                 doc.add_paragraph(line)
         
         doc.save(output_path)
-        logger.info(f"DOCX报告已保存到: {output_path}")
+        print(f"📄 DOCX报告已保存到: {output_path}")
         return output_path
     
     def _save_pdf(self, markdown_content: str, output_path: str, title: str) -> str:
@@ -602,7 +602,7 @@ class ReportGenerator:
         
         # 生成PDF
         pdfkit.from_string(styled_html, output_path, options=options)
-        logger.info(f"PDF报告已保存到: {output_path}")
+        print(f"📄 PDF报告已保存到: {output_path}")
         return output_path
     
     def get_supported_formats(self) -> list:

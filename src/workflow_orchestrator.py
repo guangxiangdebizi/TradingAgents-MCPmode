@@ -69,7 +69,7 @@ class WorkflowOrchestrator:
             "risk_manager": RiskManager(self.mcp_manager)
         }
         
-        logger.info(f"初始化了 {len(agents)} 个智能体")
+        print(f"初始化了 {len(agents)} 个智能体")
         return agents
     
     def _create_workflow(self) -> StateGraph:
@@ -424,9 +424,9 @@ class WorkflowOrchestrator:
     
     def _log_analysis_summary(self, state):
         """记录分析摘要"""
-        logger.info("\n" + "="*50)
-        logger.info("分析流程摘要")
-        logger.info("="*50)
+        print("\n" + "="*50)
+        print("分析流程摘要")
+        print("="*50)
         
         # 处理状态可能是字典或AgentState对象的情况
         if isinstance(state, dict):
@@ -446,33 +446,33 @@ class WorkflowOrchestrator:
             errors = state.errors
             warnings = state.warnings
         
-        logger.info(f"用户问题: {user_query}")
+        print(f"用户问题: {user_query}")
         
         # 智能体执行统计
         mcp_enabled_count = len([h for h in agent_execution_history if h.get("mcp_used", False)])
         total_executions = len(agent_execution_history)
-        logger.info(f"智能体执行次数: {total_executions}")
-        logger.info(f"MCP工具使用次数: {mcp_enabled_count}")
-        logger.info(f"MCP工具调用次数: {len(mcp_tool_calls)}")
+        print(f"智能体执行次数: {total_executions}")
+        print(f"MCP工具使用次数: {mcp_enabled_count}")
+        print(f"MCP工具调用次数: {len(mcp_tool_calls)}")
         
         # 辩论统计
         investment_rounds = investment_debate_state.get("count", 0)
         risk_rounds = risk_debate_state.get("count", 0)
-        logger.info(f"投资辩论轮次: {investment_rounds}")
-        logger.info(f"风险辩论轮次: {risk_rounds}")
+        print(f"投资辩论轮次: {investment_rounds}")
+        print(f"风险辩论轮次: {risk_rounds}")
         
         # 错误和警告
         if errors:
-            logger.warning(f"错误数量: {len(errors)}")
+            print(f"错误数量: {len(errors)}")
             for error in errors:
-                logger.warning(f"  - {error}")
+                print(f"  - {error}")
         
         if warnings:
-            logger.warning(f"警告数量: {len(warnings)}")
+            print(f"警告数量: {len(warnings)}")
             for warning in warnings:
-                logger.warning(f"  - {warning}")
+                print(f"  - {warning}")
         
-        logger.info("="*50)
+        print("="*50)
     
     def get_workflow_info(self) -> Dict[str, Any]:
         """获取工作流信息"""
@@ -497,4 +497,4 @@ class WorkflowOrchestrator:
     async def close(self):
         """关闭资源"""
         await self.mcp_manager.close()
-        logger.info("工作流编排器已关闭")
+        print("工作流编排器已关闭")

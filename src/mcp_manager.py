@@ -6,7 +6,7 @@ from langchain_mcp_adapters.client import MultiServerMCPClient
 from langchain_openai import ChatOpenAI
 from langgraph.prebuilt import create_react_agent
 from dotenv import load_dotenv
-from loguru import logger
+# from loguru import logger  # 已移除
 
 
 class MCPManager:
@@ -33,20 +33,20 @@ class MCPManager:
         # 对话历史
         self.conversation_history: List[Dict[str, str]] = []
         
-        logger.info("MCP管理器初始化完成")
+        print("MCP管理器初始化完成")
     
     def _load_config(self, config_file: str) -> Dict[str, Any]:
         """加载配置文件"""
         try:
             with open(config_file, 'r', encoding='utf-8') as f:
                 config = json.load(f)
-            logger.info(f"配置文件加载成功: {config_file}")
+            print(f"配置文件加载成功: {config_file}")
             return config
         except FileNotFoundError:
-            logger.warning(f"配置文件未找到: {config_file}，使用默认配置")
+            print(f"⚠️ 配置文件未找到: {config_file}，使用默认配置")
             return {"servers": {}, "agent_permissions": {}}
         except json.JSONDecodeError as e:
-            logger.error(f"配置文件格式错误: {e}")
+            print(f"❌ 配置文件格式错误: {e}")
             return {"servers": {}, "agent_permissions": {}}
     
     def _init_llm(self) -> ChatOpenAI:
@@ -66,7 +66,7 @@ class MCPManager:
             max_tokens=max_tokens
         )
         
-        logger.info(f"大模型初始化完成: {model_name} @ {base_url}")
+        print(f"大模型初始化完成: {model_name} @ {base_url}")
         return llm
     
     def _load_agent_permissions(self) -> Dict[str, bool]:
@@ -97,7 +97,7 @@ class MCPManager:
                 # 如果环境变量未设置，默认为false
                 permissions[agent_name] = False
         
-        logger.info(f"智能体权限配置从环境变量加载完成: {permissions}")
+        print(f"智能体权限配置从环境变量加载完成: {permissions}")
         return permissions
     
     async def initialize(self, mcp_config: Optional[Dict] = None) -> bool:
@@ -106,14 +106,14 @@ class MCPManager:
             # 使用配置创建MCP客户端
             config = mcp_config or self.config.get("servers", {})
             if not config:
-                logger.warning("未找到MCP服务器配置，跳过MCP初始化")
+                print("⚠️ 未找到MCP服务器配置，跳过MCP初始化")
                 return False
             
             self.client = MultiServerMCPClient(config)
             
             # 获取所有可用工具
             self.tools = await self.client.get_tools()
-            logger.info(f"✅ 成功连接到MCP服务器，发现 {len(self.tools)} 个工具")
+            print(f"✅ 成功连接到MCP服务器，发现 {len(self.tools)} 个工具")
             
             # 按服务器组织工具
             self.tools_by_server = await self._organize_tools_by_server()
@@ -121,7 +121,7 @@ class MCPManager:
             return True
             
         except Exception as e:
-            logger.error(f"❌ MCP客户端初始化失败: {e}")
+            print(f"❌ MCP客户端初始化失败: {e}")
             return False
     
     async def _organize_tools_by_server(self) -> Dict[str, List]:
@@ -146,11 +146,11 @@ class MCPManager:
         """获取指定智能体可用的工具列表"""
         # 检查权限
         if not self.agent_permissions.get(agent_name, False):
-            logger.info(f"智能体 {agent_name} 未被授权使用MCP工具")
+            print(f"智能体 {agent_name} 未被授权使用MCP工具")
             return []
         
         # 返回所有可用工具
-        logger.info(f"智能体 {agent_name} 可使用 {len(self.tools)} 个MCP工具")
+        print(f"智能体 {agent_name} 可使用 {len(self.tools)} 个MCP工具")
         return self.tools
     
     def create_agent_with_tools(self, agent_name: str):
@@ -163,7 +163,7 @@ class MCPManager:
         
         # 创建带工具的智能体
         agent = create_react_agent(self.llm, tools)
-        logger.info(f"为智能体 {agent_name} 创建了带 {len(tools)} 个工具的React智能体")
+        print(f"为智能体 {agent_name} 创建了带 {len(tools)} 个工具的React智能体")
         return agent
     
     def get_tools_info(self) -> Dict[str, Any]:
@@ -200,7 +200,7 @@ class MCPManager:
                             tool_info["required"] = schema.get('required', [])
                 
                 except Exception as e:
-                    logger.warning(f"获取工具 '{tool.name}' 参数信息失败: {e}")
+                    print(f"⚠️ 获取工具 '{tool.name}' 参数信息失败: {e}")
                 
                 tools_info.append(tool_info)
             
@@ -224,7 +224,7 @@ class MCPManager:
         # 检查权限
         if not self.agent_permissions.get(agent_name, False):
             error_msg = f"智能体 {agent_name} 未被授权使用MCP工具"
-            logger.warning(error_msg)
+            print(f"⚠️ {error_msg}")
             return {"error": error_msg}
         
         # 查找工具
@@ -236,17 +236,17 @@ class MCPManager:
         
         if not target_tool:
             error_msg = f"未找到工具: {tool_name}"
-            logger.error(error_msg)
+            print(f"❌ {error_msg}")
             return {"error": error_msg}
         
         try:
             # 调用工具
             result = await target_tool.ainvoke(tool_args)
-            logger.info(f"智能体 {agent_name} 成功调用工具 {tool_name}")
+            print(f"智能体 {agent_name} 成功调用工具 {tool_name}")
             return result
         except Exception as e:
             error_msg = f"工具调用失败: {e}"
-            logger.error(error_msg)
+            print(f"❌ {error_msg}")
             return {"error": error_msg}
     
     async def close(self):
@@ -256,11 +256,11 @@ class MCPManager:
                 # 检查客户端是否有close方法
                 if hasattr(self.client, 'close'):
                     await self.client.close()
-                    logger.info("MCP连接已关闭")
+                    print("MCP连接已关闭")
                 else:
-                    logger.info("MCP客户端无需显式关闭")
+                    print("MCP客户端无需显式关闭")
             except Exception as e:
-                logger.error(f"关闭MCP连接时出错: {e}")
+                print(f"❌ 关闭MCP连接时出错: {e}")
     
     def is_agent_mcp_enabled(self, agent_name: str) -> bool:
         """检查智能体是否启用了MCP工具"""

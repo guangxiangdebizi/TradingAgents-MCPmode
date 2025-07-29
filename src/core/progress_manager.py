@@ -2,7 +2,7 @@ from typing import Dict, Any, List, Optional
 from datetime import datetime
 import json
 from pathlib import Path
-from loguru import logger
+# from loguru import logger  # 已移除
 
 from .state_manager import StateManager
 from .data_persistence import DataPersistence
@@ -18,7 +18,7 @@ class ProgressManager:
         # 同步会话ID
         self.session_id = self.data_persistence.session_id
         
-        logger.info(f"📈 进度管理器初始化完成 - 会话ID: {self.session_id}")
+        print(f"📈 进度管理器初始化完成 - 会话ID: {self.session_id}")
     
     def start_workflow(self, user_query: str):
         """开始工作流"""
@@ -195,7 +195,7 @@ class ProgressManager:
         self.data_persistence = DataPersistence()  # 创建新会话
         self.session_id = self.data_persistence.session_id
         
-        logger.info(f"🔄 进度管理器已重置 - 新会话ID: {self.session_id}")
+        print(f"🔄 进度管理器已重置 - 新会话ID: {self.session_id}")
     
     def _sync_and_save(self):
         """同步状态并保存数据"""
@@ -223,7 +223,7 @@ class ProgressManager:
             session_data = self.data_persistence.get_session_data()
             
             if not session_data:
-                logger.warning(f"⚠️ 会话数据不存在: {session_id}")
+                print(f"⚠️ 会话数据不存在: {session_id}")
                 return False
             
             # 恢复状态管理器状态
@@ -241,11 +241,11 @@ class ProgressManager:
                     self.state_manager.agent_states[agent_name].update(agent_state)
             
             self.session_id = session_id
-            logger.info(f"📂 成功加载会话: {session_id}")
+            print(f"📂 成功加载会话: {session_id}")
             return True
             
         except Exception as e:
-            logger.error(f"❌ 加载会话失败: {session_id} - {str(e)}")
+            print(f"❌ 加载会话失败: {session_id} - {str(e)}")
             return False
     
     def export_session_data(self, export_path: Optional[str] = None) -> str:
@@ -259,9 +259,9 @@ class ProgressManager:
             with open(export_path, 'w', encoding='utf-8') as f:
                 json.dump(session_data, f, ensure_ascii=False, indent=2)
             
-            logger.info(f"📤 会话数据已导出: {export_path}")
+            print(f"📤 会话数据已导出: {export_path}")
             return export_path
             
         except Exception as e:
-            logger.error(f"❌ 导出会话数据失败: {str(e)}")
+            print(f"❌ 导出会话数据失败: {str(e)}")
             raise

@@ -29,13 +29,13 @@ class BaseAgent(ABC):
         # 延迟创建智能体实例，等到MCP工具初始化完成后再创建
         self.agent = None
         
-        logger.info(f"智能体 {agent_name} 初始化完成，MCP工具: {'启用' if self.mcp_enabled else '禁用'}")
+        print(f"智能体 {agent_name} 初始化完成，MCP工具: {'启用' if self.mcp_enabled else '禁用'}")
     
     def ensure_agent_created(self):
         """确保智能体实例已创建（在MCP工具初始化后调用）"""
         if self.agent is None:
             self.agent = self.mcp_manager.create_agent_with_tools(self.agent_name)
-            logger.info(f"智能体 {self.agent_name} 实例创建完成")
+            print(f"智能体 {self.agent_name} 实例创建完成")
     
     @abstractmethod
     def get_system_prompt(self, state: AgentState) -> str:
@@ -128,7 +128,7 @@ class BaseAgent(ABC):
             if progress_tracker:
                 if hasattr(progress_tracker, 'start_agent'):
                     # 新的ProgressManager接口
-                    progress_tracker.start_agent(self.agent_name, f"分析: {user_message[:50]}...")
+                    progress_tracker.start_agent(self.agent_name, f"分析: {user_message}")
                 elif hasattr(progress_tracker, 'log_agent_start'):
                     # 旧的ProgressTracker接口（兼容性）
                     progress_tracker.log_agent_start(self.agent_name, {
@@ -277,7 +277,7 @@ class BaseAgent(ABC):
         """调用MCP工具"""
         if not self.mcp_enabled:
             error_msg = f"智能体 {self.agent_name} 未启用MCP工具"
-            logger.warning(error_msg)
+            print(f"⚠️ {error_msg}")
             if isinstance(state, dict):
                 if 'warnings' not in state:
                     state['warnings'] = []
