@@ -1,23 +1,66 @@
+import json
+import os
 from datetime import datetime
 from typing import Dict, Any, Optional
 
 
 class ProgressTracker:
-    """简化的进度跟踪器 - 只输出核心agent结果"""
+    """简化的进度跟踪器 - 输出核心agent结果并保存到JSON"""
     
     def __init__(self, session_id: str = None):
         self.session_id = session_id or datetime.now().strftime("%Y%m%d_%H%M%S")
         self.current_stage = ""
         self.current_agent = ""
+        
+        # 初始化dump文件夹和JSON文件
+        self.dump_dir = os.path.join(os.path.dirname(__file__), "dump")
+        os.makedirs(self.dump_dir, exist_ok=True)
+        self.json_file = os.path.join(self.dump_dir, f"session_{self.session_id}.json")
+        
+        # 初始化JSON数据结构
+        self.session_data = {
+            "session_id": self.session_id,
+            "created_at": datetime.now().isoformat(),
+            "updated_at": datetime.now().isoformat(),
+            "status": "active",
+            "user_query": "",
+            "stages": [],
+            "agents": [],
+            "actions": [],
+            "mcp_calls": [],
+            "errors": [],
+            "warnings": [],
+            "final_results": {}
+        }
+        
+        self._save_json()
         print(f"🚀 会话开始: {self.session_id}")
+    
+    def _save_json(self):
+        """保存数据到JSON文件"""
+        try:
+            self.session_data["updated_at"] = datetime.now().isoformat()
+            with open(self.json_file, 'w', encoding='utf-8') as f:
+                json.dump(self.session_data, f, ensure_ascii=False, indent=2)
+        except Exception as e:
+            print(f"❌ 保存JSON失败: {e}")
     
     def update_user_query(self, query: str):
         """更新用户查询"""
+        self.session_data["user_query"] = query
+        self._save_json()
         print(f"📝 用户查询: {query}")
     
     def start_stage(self, stage_name: str, description: str = ""):
         """开始新阶段"""
         self.current_stage = stage_name
+        stage_data = {
+            "stage_name": stage_name,
+            "description": description,
+            "start_time": datetime.now().isoformat()
+        }
+        self.session_data["stages"].append(stage_data)
+        self._save_json()
         print(f"📍 阶段开始: {stage_name}")
         if description:
             print(f"   描述: {description}")
@@ -25,12 +68,30 @@ class ProgressTracker:
     def start_agent(self, agent_name: str, action: str = ""):
         """开始智能体工作"""
         self.current_agent = agent_name
+        agent_data = {
+            "agent_name": agent_name,
+            "action": action,
+            "start_time": datetime.now().isoformat(),
+            "status": "running",
+            "result": ""
+        }
+        self.session_data["agents"].append(agent_data)
+        self._save_json()
         print(f"🤖 智能体开始工作: {agent_name}")
         if action:
             print(f"   执行: {action}")
     
     def complete_agent(self, agent_name: str, result: str = "", success: bool = True):
         """完成智能体工作"""
+        # 更新对应的agent记录
+        for agent in self.session_data["agents"]:
+            if agent["agent_name"] == agent_name and agent["status"] == "running":
+                agent["status"] = "completed" if success else "failed"
+                agent["result"] = result
+                agent["end_time"] = datetime.now().isoformat()
+                break
+        
+        self._save_json()
         status = "✅ 成功" if success else "❌ 失败"
         print(f"🏁 智能体完成: {agent_name} - {status}")
         
@@ -43,10 +104,27 @@ class ProgressTracker:
     
     def add_agent_action(self, agent_name: str, action: str, details: Dict[str, Any] = None):
         """添加智能体行动记录"""
+        action_data = {
+            "agent_name": agent_name,
+            "action": action,
+            "details": details or {},
+            "timestamp": datetime.now().isoformat()
+        }
+        self.session_data["actions"].append(action_data)
+        self._save_json()
         print(f"🔄 {agent_name}: {action}")
     
     def add_mcp_tool_call(self, agent_name: str, tool_name: str, tool_args: Dict, tool_result: Any):
         """记录MCP工具调用"""
+        mcp_data = {
+            "agent_name": agent_name,
+            "tool_name": tool_name,
+            "tool_args": tool_args,
+            "tool_result": str(tool_result),
+            "timestamp": datetime.now().isoformat()
+        }
+        self.session_data["mcp_calls"].append(mcp_data)
+        self._save_json()
         print(f"🔧 {agent_name} 调用工具: {tool_name}")
     
     def update_global_state(self, state_key: str, state_value: Any):
@@ -59,6 +137,13 @@ class ProgressTracker:
     
     def add_error(self, error_msg: str, agent_name: str = None):
         """添加错误记录"""
+        error_data = {
+            "error_msg": error_msg,
+            "agent_name": agent_name or "",
+            "timestamp": datetime.now().isoformat()
+        }
+        self.session_data["errors"].append(error_data)
+        self._save_json()
         if agent_name:
             print(f"❌ {agent_name} 错误: {error_msg}")
         else:
@@ -66,6 +151,13 @@ class ProgressTracker:
     
     def add_warning(self, warning_msg: str, agent_name: str = None):
         """添加警告记录"""
+        warning_data = {
+            "warning_msg": warning_msg,
+            "agent_name": agent_name or "",
+            "timestamp": datetime.now().isoformat()
+        }
+        self.session_data["warnings"].append(warning_data)
+        self._save_json()
         if agent_name:
             print(f"⚠️ {agent_name} 警告: {warning_msg}")
         else:
@@ -73,6 +165,9 @@ class ProgressTracker:
     
     def set_final_results(self, results: Dict[str, Any]):
         """设置最终结果"""
+        self.session_data["final_results"] = results
+        self.session_data["status"] = "completed"
+        self._save_json()
         print(f"🏁 会话完成")
         print("\n📊 最终结果:")
         print("=" * 60)

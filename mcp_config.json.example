@@ -1,7 +1,7 @@
 {
   "servers": {
     "finance-data-server": {
-      "url": "http://106.14.205.176/sse",
+      "url": "http://106.14.205.176:3101/sse",
       "transport": "sse",
       "timeout": 600
     }

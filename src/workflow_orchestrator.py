@@ -7,7 +7,7 @@ from dotenv import load_dotenv
 
 from .agent_states import AgentState
 from .mcp_manager import MCPManager
-from .core import ProgressManager
+from .progress_tracker import ProgressTracker
 from .agents.analysts import (
     MarketAnalyst, SentimentAnalyst, NewsAnalyst, FundamentalsAnalyst
 )
@@ -323,8 +323,9 @@ class WorkflowOrchestrator:
         print(f"📝 用户查询: {user_query}")
         
         # 初始化进度跟踪器
-        self.progress_manager = ProgressManager()
-        self.progress_manager.start_workflow(user_query)
+        self.progress_manager = ProgressTracker()
+        self.progress_manager.update_user_query(user_query)
+        self.progress_manager.log_workflow_start({"user_query": user_query})
         
         # 初始化状态
         initial_state = AgentState(
@@ -371,7 +372,8 @@ class WorkflowOrchestrator:
                     "completion_time": datetime.now().isoformat(),
                     "success": True
                 }
-                self.progress_manager.complete_workflow(True, final_results)
+                self.progress_manager.set_final_results(final_results)
+                self.progress_manager.log_workflow_completion({"success": True})
             
             if self.verbose_logging:
                 self._log_analysis_summary(final_state)
@@ -388,7 +390,8 @@ class WorkflowOrchestrator:
                     "completion_time": datetime.now().isoformat(),
                     "success": False
                 }
-                self.progress_manager.complete_workflow(False, error_results)
+                self.progress_manager.add_error(str(e))
+                self.progress_manager.log_workflow_completion({"success": False})
             
             # 安全地添加错误信息
             try:

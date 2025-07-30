@@ -20,7 +20,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from src.workflow_orchestrator import WorkflowOrchestrator
 from src.agent_states import AgentState
-from src.dumptools import AnalysisReportConverter, create_word_report, create_markdown_report, MarkdownToPDFConverter
+from src.json_to_markdown import JSONToMarkdownConverter
 
 
 def setup_logging(debug_mode: bool = False, log_file: Optional[str] = None):
@@ -41,40 +41,7 @@ def print_banner():
     print(banner)
 
 
-def auto_convert_latest_json_to_html():
-    """自动转换最新的JSON分析报告为HTML"""
-    try:
-        # 查找progress_logs目录下最新的JSON文件
-        progress_logs_dir = Path("progress_logs")
-        if not progress_logs_dir.exists():
-            print("📁 progress_logs目录不存在，跳过HTML转换")
-            return None
-        
-        # 获取所有session JSON文件
-        json_files = list(progress_logs_dir.glob("session_*.json"))
-        if not json_files:
-            print("📄 未找到分析报告JSON文件，跳过HTML转换")
-            return None
-        
-        # 找到最新的文件
-        latest_json = max(json_files, key=lambda f: f.stat().st_mtime)
-        print(f"📄 找到最新的分析报告: {latest_json.name}")
-        
-        # 转换为HTML
-        converter = AnalysisReportConverter()
-        html_file = converter.convert_json_to_html(str(latest_json))
-        
-        if html_file:
-            print(f"✅ HTML报告已生成: {html_file}")
-            print(f"🌐 可在浏览器中打开查看: file:///{html_file.replace(os.sep, '/')}")
-            return html_file
-        else:
-            print("❌ HTML转换失败")
-            return None
-            
-    except Exception as e:
-        print(f"❌ HTML转换过程中发生错误: {e}")
-        return None
+
 
 
 def print_analysis_result(result):
@@ -394,74 +361,18 @@ async def run_interactive_mode(config_file: str):
                 # 显示结果
                 print_analysis_result(result)
                 
-                # 询问是否生成报告
-                generate_report = input("\n📊 是否生成分析报告？(Y/n): ").strip().lower()
+                # 询问是否生成Markdown报告
+                generate_report = input("\n📊 是否生成Markdown分析报告？(Y/n): ").strip().lower()
                 if generate_report not in ['n', 'no']:
-                    # 询问报告格式
-                    report_format = input("📄 选择报告格式 (1: HTML, 2: Word, 3: Markdown, 4: PDF, 5: 全部): ").strip()
-                    
-                    # 查找最新的JSON文件（所有格式都需要）
-                    progress_logs_dir = Path("progress_logs")
-                    latest_json = None
-                    if progress_logs_dir.exists():
-                        json_files = list(progress_logs_dir.glob("session_*.json"))
-                        if json_files:
-                            latest_json = max(json_files, key=lambda f: f.stat().st_mtime)
-                    
-                    if report_format in ['1', '5']:
-                        print("\n🔄 正在生成HTML分析报告...")
-                        html_file = auto_convert_latest_json_to_html()
-                        if html_file:
-                            print("🎉 HTML分析报告生成完成！")
-                    
-                    if report_format in ['2', '5']:
-                        print("\n🔄 正在生成Word分析报告...")
-                        try:
-                            if latest_json:
-                                word_file = create_word_report(str(latest_json))
-                                if word_file:
-                                    print(f"🎉 Word分析报告生成完成: {word_file}")
-                                else:
-                                    print("❌ Word报告生成失败")
-                            else:
-                                print("📄 未找到分析报告JSON文件")
-                        except Exception as e:
-                            print(f"❌ Word报告生成失败: {e}")
-                    
-                    if report_format in ['3', '5']:
-                        print("\n🔄 正在生成Markdown分析报告...")
-                        try:
-                            if latest_json:
-                                md_file = create_markdown_report(str(latest_json))
-                                if md_file:
-                                    print(f"🎉 Markdown分析报告生成完成: {md_file}")
-                                else:
-                                    print("❌ Markdown报告生成失败")
-                            else:
-                                print("📄 未找到分析报告JSON文件")
-                        except Exception as e:
-                            print(f"❌ Markdown报告生成失败: {e}")
-                    
-                    if report_format in ['4', '5']:
-                        print("\n🔄 正在生成PDF分析报告...")
-                        try:
-                            if latest_json:
-                                # 首先生成Markdown文件
-                                md_file = create_markdown_report(str(latest_json))
-                                if md_file:
-                                    # 然后将Markdown转换为PDF
-                                    converter = MarkdownToPDFConverter()
-                                    pdf_file = converter.convert_to_pdf(md_file)
-                                    if pdf_file:
-                                        print(f"🎉 PDF分析报告生成完成: {pdf_file}")
-                                    else:
-                                        print("❌ PDF报告生成失败")
-                                else:
-                                    print("❌ 无法生成Markdown文件，PDF转换失败")
-                            else:
-                                print("📄 未找到分析报告JSON文件")
-                        except Exception as e:
-                            print(f"❌ PDF报告生成失败: {e}")
+                    try:
+                        converter = JSONToMarkdownConverter()
+                        md_file = converter.convert_latest_json()
+                        if md_file:
+                            print(f"🎉 Markdown分析报告生成完成: {md_file}")
+                        else:
+                            print("❌ Markdown报告生成失败")
+                    except Exception as e:
+                        print(f"❌ Markdown报告生成失败: {e}")
                 
                 # 询问是否继续
                 continue_analysis = input("\n🔄 是否继续提问？(y/N): ").strip().lower()
