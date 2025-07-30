@@ -20,9 +20,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from src.workflow_orchestrator import WorkflowOrchestrator
 from src.agent_states import AgentState
-from json_to_html_converter import AnalysisReportConverter
-from json_to_word_converter import create_word_report
-from json_to_markdown_converter import create_markdown_report
+from src.dumptools import AnalysisReportConverter, create_word_report, create_markdown_report, MarkdownToPDFConverter
 
 
 def setup_logging(debug_mode: bool = False, log_file: Optional[str] = None):
@@ -261,7 +259,7 @@ async def run_single_analysis(user_query: str, config_file: str):
         # 询问报告格式
         print("\n" + "="*60)
         print("📊 分析完成，正在生成报告...")
-        report_format = input("📄 选择报告格式 (1: HTML, 2: Word, 3: Markdown, 4: 全部, Enter: 默认HTML): ").strip()
+        report_format = input("📄 选择报告格式 (1: HTML, 2: Word, 3: Markdown, 4: PDF, 5: 全部, Enter: 默认HTML): ").strip()
         if not report_format:
             report_format = '1'
         
@@ -273,7 +271,7 @@ async def run_single_analysis(user_query: str, config_file: str):
             if json_files:
                 latest_json = max(json_files, key=lambda f: f.stat().st_mtime)
         
-        if report_format in ['1', '4']:
+        if report_format in ['1', '5']:
             print("\n🔄 正在生成HTML分析报告...")
             html_file = auto_convert_latest_json_to_html()
             if html_file:
@@ -281,7 +279,7 @@ async def run_single_analysis(user_query: str, config_file: str):
             else:
                 print("❌ HTML报告生成失败")
         
-        if report_format in ['2', '4']:
+        if report_format in ['2', '5']:
             print("\n🔄 正在生成Word分析报告...")
             try:
                 if latest_json:
@@ -295,7 +293,7 @@ async def run_single_analysis(user_query: str, config_file: str):
             except Exception as e:
                 print(f"❌ Word报告生成失败: {e}")
         
-        if report_format in ['3', '4']:
+        if report_format in ['3', '5']:
             print("\n🔄 正在生成Markdown分析报告...")
             try:
                 if latest_json:
@@ -308,6 +306,27 @@ async def run_single_analysis(user_query: str, config_file: str):
                     print("📄 未找到分析报告JSON文件")
             except Exception as e:
                 print(f"❌ Markdown报告生成失败: {e}")
+        
+        if report_format in ['4', '5']:
+            print("\n🔄 正在生成PDF分析报告...")
+            try:
+                if latest_json:
+                    # 首先生成Markdown文件
+                    md_file = create_markdown_report(str(latest_json))
+                    if md_file:
+                        # 然后将Markdown转换为PDF
+                        converter = MarkdownToPDFConverter()
+                        pdf_file = converter.convert_to_pdf(md_file)
+                        if pdf_file:
+                            print(f"🎉 PDF分析报告生成完成: {pdf_file}")
+                        else:
+                            print("❌ PDF报告生成失败")
+                    else:
+                        print("❌ 无法生成Markdown文件，PDF转换失败")
+                else:
+                    print("📄 未找到分析报告JSON文件")
+            except Exception as e:
+                print(f"❌ PDF报告生成失败: {e}")
         print("="*60)
         
         return result
@@ -356,10 +375,11 @@ async def run_interactive_mode(config_file: str):
                 
                 if user_query.lower() == 'help':
                     print("\n📖 帮助信息:")
-                    print("  • 输入任何关于股票分析的问题")
+                    print("  • 支持自然语言查询，无需指定市场和日期")
                     print("  • 例如: '分析一下苹果公司的股票'")
-                    print("  • 例如: '给我分析000001.SZ的投资价值'")
-                    print("  • 智能体会自动判断股票代码、市场类型等信息")
+                    print("  • 例如: '给我分析平安银行的投资价值'")
+                    print("  • 例如: '腾讯控股怎么样？'")
+                    print("  • 智能体会自动识别股票并获取最新数据")
                     print("  • 输入 'quit' 或 'exit' 退出程序")
                     continue
                 
@@ -378,7 +398,7 @@ async def run_interactive_mode(config_file: str):
                 generate_report = input("\n📊 是否生成分析报告？(Y/n): ").strip().lower()
                 if generate_report not in ['n', 'no']:
                     # 询问报告格式
-                    report_format = input("📄 选择报告格式 (1: HTML, 2: Word, 3: Markdown, 4: 全部): ").strip()
+                    report_format = input("📄 选择报告格式 (1: HTML, 2: Word, 3: Markdown, 4: PDF, 5: 全部): ").strip()
                     
                     # 查找最新的JSON文件（所有格式都需要）
                     progress_logs_dir = Path("progress_logs")
@@ -388,13 +408,13 @@ async def run_interactive_mode(config_file: str):
                         if json_files:
                             latest_json = max(json_files, key=lambda f: f.stat().st_mtime)
                     
-                    if report_format in ['1', '4']:
+                    if report_format in ['1', '5']:
                         print("\n🔄 正在生成HTML分析报告...")
                         html_file = auto_convert_latest_json_to_html()
                         if html_file:
                             print("🎉 HTML分析报告生成完成！")
                     
-                    if report_format in ['2', '4']:
+                    if report_format in ['2', '5']:
                         print("\n🔄 正在生成Word分析报告...")
                         try:
                             if latest_json:
@@ -408,7 +428,7 @@ async def run_interactive_mode(config_file: str):
                         except Exception as e:
                             print(f"❌ Word报告生成失败: {e}")
                     
-                    if report_format in ['3', '4']:
+                    if report_format in ['3', '5']:
                         print("\n🔄 正在生成Markdown分析报告...")
                         try:
                             if latest_json:
@@ -421,6 +441,27 @@ async def run_interactive_mode(config_file: str):
                                 print("📄 未找到分析报告JSON文件")
                         except Exception as e:
                             print(f"❌ Markdown报告生成失败: {e}")
+                    
+                    if report_format in ['4', '5']:
+                        print("\n🔄 正在生成PDF分析报告...")
+                        try:
+                            if latest_json:
+                                # 首先生成Markdown文件
+                                md_file = create_markdown_report(str(latest_json))
+                                if md_file:
+                                    # 然后将Markdown转换为PDF
+                                    converter = MarkdownToPDFConverter()
+                                    pdf_file = converter.convert_to_pdf(md_file)
+                                    if pdf_file:
+                                        print(f"🎉 PDF分析报告生成完成: {pdf_file}")
+                                    else:
+                                        print("❌ PDF报告生成失败")
+                                else:
+                                    print("❌ 无法生成Markdown文件，PDF转换失败")
+                            else:
+                                print("📄 未找到分析报告JSON文件")
+                        except Exception as e:
+                            print(f"❌ PDF报告生成失败: {e}")
                 
                 # 询问是否继续
                 continue_analysis = input("\n🔄 是否继续提问？(y/N): ").strip().lower()
@@ -453,7 +494,8 @@ def main():
 示例用法:
   python main.py                                    # 交互模式
   python main.py -c AAPL                          # 分析苹果股票
-  python main.py -c AAPL -d 2024-01-15 -m US     # 指定日期和市场
+  python main.py -c "苹果公司股票分析"              # 自然语言查询
+  python main.py -c "平安银行"                    # 分析A股
   python main.py --interactive                     # 明确指定交互模式
   python main.py --debug --log-file analysis.log  # 调试模式并保存日志
         """
