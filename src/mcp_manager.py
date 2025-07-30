@@ -79,6 +79,7 @@ class MCPManager:
             "sentiment_analyst": "SENTIMENT_ANALYST_MCP_ENABLED",
             "news_analyst": "NEWS_ANALYST_MCP_ENABLED",
             "fundamentals_analyst": "FUNDAMENTALS_ANALYST_MCP_ENABLED",
+            "shareholder_analyst": "SHAREHOLDER_ANALYST_MCP_ENABLED",
             "bull_researcher": "BULL_RESEARCHER_MCP_ENABLED",
             "bear_researcher": "BEAR_RESEARCHER_MCP_ENABLED",
             "research_manager": "RESEARCH_MANAGER_MCP_ENABLED",

@@ -9,7 +9,7 @@ from .agent_states import AgentState
 from .mcp_manager import MCPManager
 from .progress_tracker import ProgressTracker
 from .agents.analysts import (
-    MarketAnalyst, SentimentAnalyst, NewsAnalyst, FundamentalsAnalyst
+    MarketAnalyst, SentimentAnalyst, NewsAnalyst, FundamentalsAnalyst, ShareholderAnalyst
 )
 from .agents.researchers import BullResearcher, BearResearcher
 from .agents.managers import ResearchManager, Trader
@@ -53,6 +53,7 @@ class WorkflowOrchestrator:
             "sentiment_analyst": SentimentAnalyst(self.mcp_manager),
             "news_analyst": NewsAnalyst(self.mcp_manager),
             "fundamentals_analyst": FundamentalsAnalyst(self.mcp_manager),
+            "shareholder_analyst": ShareholderAnalyst(self.mcp_manager),
             
             # 研究员团队
             "bull_researcher": BullResearcher(self.mcp_manager),
@@ -81,6 +82,7 @@ class WorkflowOrchestrator:
         workflow.add_node("sentiment_analyst", self._sentiment_analyst_node)
         workflow.add_node("news_analyst", self._news_analyst_node)
         workflow.add_node("fundamentals_analyst", self._fundamentals_analyst_node)
+        workflow.add_node("shareholder_analyst", self._shareholder_analyst_node)
         
         workflow.add_node("bull_researcher", self._bull_researcher_node)
         workflow.add_node("bear_researcher", self._bear_researcher_node)
@@ -101,9 +103,10 @@ class WorkflowOrchestrator:
         workflow.add_edge("market_analyst", "sentiment_analyst")
         workflow.add_edge("sentiment_analyst", "news_analyst")
         workflow.add_edge("news_analyst", "fundamentals_analyst")
+        workflow.add_edge("fundamentals_analyst", "shareholder_analyst")
         
         # 第二阶段：研究员辩论
-        workflow.add_edge("fundamentals_analyst", "bull_researcher")
+        workflow.add_edge("shareholder_analyst", "bull_researcher")
         workflow.add_conditional_edges(
             "bull_researcher",
             self._should_continue_investment_debate,
@@ -224,6 +227,23 @@ class WorkflowOrchestrator:
             self.progress_manager.complete_agent("fundamentals_analyst", fundamentals_report, success=bool(fundamentals_report))
         
         print("🎯 第1阶段完成")
+        return result
+    
+    async def _shareholder_analyst_node(self, state: AgentState) -> AgentState:
+        """股东分析师节点"""
+        print("📊 股东结构分析师")
+        
+        # 记录智能体开始工作
+        if self.progress_manager:
+            self.progress_manager.start_agent("shareholder_analyst", "股东结构和大宗交易分析")
+        
+        result = await self.agents["shareholder_analyst"].process(state, self.progress_manager)
+        
+        # 保存分析结果到progress_tracker
+        if self.progress_manager:
+            shareholder_report = result.get('shareholder_report', '') if isinstance(result, dict) else getattr(result, 'shareholder_report', '')
+            self.progress_manager.complete_agent("shareholder_analyst", shareholder_report, success=bool(shareholder_report))
+        
         return result
     
     async def _bull_researcher_node(self, state: AgentState) -> AgentState:
