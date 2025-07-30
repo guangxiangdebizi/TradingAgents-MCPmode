@@ -160,25 +160,69 @@ class WorkflowOrchestrator:
     async def _market_analyst_node(self, state: AgentState) -> AgentState:
         """市场分析师节点"""
         print("🏢 第1阶段：市场分析师")
+        
+        # 记录智能体开始工作
+        if self.progress_manager:
+            self.progress_manager.start_agent("market_analyst", "市场技术分析")
+        
         result = await self.agents["market_analyst"].process(state, self.progress_manager)
+        
+        # 保存分析结果到progress_tracker
+        if self.progress_manager:
+            market_report = result.get('market_report', '') if isinstance(result, dict) else getattr(result, 'market_report', '')
+            self.progress_manager.complete_agent("market_analyst", market_report, success=bool(market_report))
+        
         return result
     
     async def _sentiment_analyst_node(self, state: AgentState) -> AgentState:
         """情绪分析师节点"""
         print("😊 情绪分析师")
+        
+        # 记录智能体开始工作
+        if self.progress_manager:
+            self.progress_manager.start_agent("sentiment_analyst", "市场情绪分析")
+        
         result = await self.agents["sentiment_analyst"].process(state, self.progress_manager)
+        
+        # 保存分析结果到progress_tracker
+        if self.progress_manager:
+            sentiment_report = result.get('sentiment_report', '') if isinstance(result, dict) else getattr(result, 'sentiment_report', '')
+            self.progress_manager.complete_agent("sentiment_analyst", sentiment_report, success=bool(sentiment_report))
+        
         return result
 
     async def _news_analyst_node(self, state: AgentState) -> AgentState:
         """新闻分析师节点"""
         print("📰 新闻分析师")
+        
+        # 记录智能体开始工作
+        if self.progress_manager:
+            self.progress_manager.start_agent("news_analyst", "新闻信息分析")
+        
         result = await self.agents["news_analyst"].process(state, self.progress_manager)
+        
+        # 保存分析结果到progress_tracker
+        if self.progress_manager:
+            news_report = result.get('news_report', '') if isinstance(result, dict) else getattr(result, 'news_report', '')
+            self.progress_manager.complete_agent("news_analyst", news_report, success=bool(news_report))
+        
         return result
 
     async def _fundamentals_analyst_node(self, state: AgentState) -> AgentState:
         """基本面分析师节点"""
-        print("📊 基本面分析师")
+        print("📉 基本面分析师")
+        
+        # 记录智能体开始工作
+        if self.progress_manager:
+            self.progress_manager.start_agent("fundamentals_analyst", "基本面分析")
+        
         result = await self.agents["fundamentals_analyst"].process(state, self.progress_manager)
+        
+        # 保存分析结果到progress_tracker
+        if self.progress_manager:
+            fundamentals_report = result.get('fundamentals_report', '') if isinstance(result, dict) else getattr(result, 'fundamentals_report', '')
+            self.progress_manager.complete_agent("fundamentals_analyst", fundamentals_report, success=bool(fundamentals_report))
+        
         print("🎯 第1阶段完成")
         return result
     
