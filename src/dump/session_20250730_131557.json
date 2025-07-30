@@ -1,0 +1,14 @@
+{
+  "session_id": "20250730_131557",
+  "created_at": "2025-07-30T13:15:57.138475",
+  "updated_at": "2025-07-30T13:15:57.148832",
+  "status": "active",
+  "user_query": "cd 'c:\\Users\\26214\\Desktop\\MyProject\\TradingAgents-MCPmode'",
+  "stages": [],
+  "agents": [],
+  "actions": [],
+  "mcp_calls": [],
+  "errors": [],
+  "warnings": [],
+  "final_results": {}
+}
