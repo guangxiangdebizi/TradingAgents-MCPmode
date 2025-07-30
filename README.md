@@ -125,9 +125,6 @@ MAX_RISK_DEBATE_ROUNDS=2
 DEBUG_MODE=true
 VERBOSE_LOGGING=true
 
-# 股票分析配置
-DEFAULT_COMPANY=AAPL
-STOCK_MARKET_TYPE=US
 ```
 
 #### MCP服务器配置 (`mcp_config.json`)
