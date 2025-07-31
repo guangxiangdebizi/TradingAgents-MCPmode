@@ -84,120 +84,83 @@ class JSONToMarkdownConverter:
             md_lines.append(f"> {data['user_query']}")
             md_lines.append("")
         
-        # 阶段信息
-        if 'phases' in data and data['phases']:
-            md_lines.append("## 📊 分析阶段")
-            md_lines.append("")
-            for phase_name, phase_data in data['phases'].items():
-                md_lines.append(f"### {phase_name}")
-                md_lines.append("")
-                md_lines.append(f"- **开始时间**: {phase_data.get('start_time', 'N/A')}")
-                if phase_data.get('end_time'):
-                    md_lines.append(f"- **结束时间**: {phase_data.get('end_time')}")
-                md_lines.append(f"- **状态**: {phase_data.get('status', 'N/A')}")
-                md_lines.append("")
-        
-        # 智能体信息
+        # 智能体执行情况
         if 'agents' in data and data['agents']:
             md_lines.append("## 🤖 智能体执行情况")
             md_lines.append("")
             
-            for agent_name, agent_data in data['agents'].items():
+            for agent in data['agents']:
+                agent_name = agent.get('agent_name', 'Unknown Agent')
                 md_lines.append(f"### {agent_name}")
                 md_lines.append("")
                 
                 # 基本信息
-                md_lines.append(f"- **状态**: {agent_data.get('status', 'N/A')}")
-                md_lines.append(f"- **开始时间**: {agent_data.get('start_time', 'N/A')}")
-                if agent_data.get('end_time'):
-                    md_lines.append(f"- **结束时间**: {agent_data.get('end_time')}")
+                md_lines.append(f"- **状态**: {agent.get('status', 'N/A')}")
+                md_lines.append(f"- **开始时间**: {agent.get('start_time', 'N/A')}")
+                if agent.get('end_time'):
+                    md_lines.append(f"- **结束时间**: {agent.get('end_time')}")
+                md_lines.append(f"- **执行结果**: {agent.get('result', 'N/A')}")
                 md_lines.append("")
                 
-                # 执行结果
-                if agent_data.get('result'):
-                    md_lines.append("**执行结果:**")
+                # 执行内容
+                if agent.get('action'):
+                    md_lines.append("**执行内容**:")
                     md_lines.append("")
                     md_lines.append("```")
-                    md_lines.append(str(agent_data['result']))
+                    md_lines.append(str(agent['action']))
                     md_lines.append("```")
                     md_lines.append("")
-                
-                # 行动记录
-                if agent_data.get('actions'):
-                    md_lines.append("**行动记录:**")
-                    md_lines.append("")
-                    for i, action in enumerate(agent_data['actions'], 1):
-                        md_lines.append(f"{i}. **{action.get('action', 'Unknown')}**")
-                        if action.get('timestamp'):
-                            md_lines.append(f"   - 时间: {action['timestamp']}")
-                        if action.get('details'):
-                            md_lines.append(f"   - 详情: {action['details']}")
-                        if action.get('result'):
-                            md_lines.append(f"   - 结果: {action['result']}")
-                        md_lines.append("")
-                
-                # MCP工具调用
-                if agent_data.get('mcp_calls'):
-                    md_lines.append("**MCP工具调用:**")
-                    md_lines.append("")
-                    for i, call in enumerate(agent_data['mcp_calls'], 1):
-                        md_lines.append(f"{i}. **{call.get('tool', 'Unknown')}**")
-                        if call.get('timestamp'):
-                            md_lines.append(f"   - 时间: {call['timestamp']}")
-                        if call.get('params'):
-                            md_lines.append(f"   - 参数: `{call['params']}`")
-                        if call.get('result'):
-                            md_lines.append(f"   - 结果: {call['result']}")
-                        md_lines.append("")
         
-        # 错误和警告
-        if data.get('errors') or data.get('warnings'):
-            md_lines.append("## ⚠️ 错误和警告")
+        # 阶段信息
+        if 'stages' in data and data['stages']:
+            md_lines.append("## 📊 执行阶段")
             md_lines.append("")
-            
-            if data.get('errors'):
-                md_lines.append("### 错误")
+            for i, stage in enumerate(data['stages'], 1):
+                md_lines.append(f"### 阶段 {i}")
                 md_lines.append("")
-                for error in data['errors']:
-                    md_lines.append(f"- **{error.get('timestamp', 'N/A')}**: {error.get('message', 'N/A')}")
+                md_lines.append(f"**内容**: {stage}")
                 md_lines.append("")
-            
-            if data.get('warnings'):
-                md_lines.append("### 警告")
+        
+        # MCP调用情况
+        if 'mcp_calls' in data and data['mcp_calls']:
+            md_lines.append("## 🔧 MCP工具调用")
+            md_lines.append("")
+            for i, call in enumerate(data['mcp_calls'], 1):
+                md_lines.append(f"### 调用 {i}")
                 md_lines.append("")
-                for warning in data['warnings']:
-                    md_lines.append(f"- **{warning.get('timestamp', 'N/A')}**: {warning.get('message', 'N/A')}")
+                md_lines.append(f"**工具**: {call.get('tool', 'N/A')}")
+                md_lines.append(f"**时间**: {call.get('timestamp', 'N/A')}")
+                if call.get('result'):
+                    md_lines.append(f"**结果**: {call['result']}")
                 md_lines.append("")
+        
+        # 错误信息
+        if 'errors' in data and data['errors']:
+            md_lines.append("## ❌ 错误信息")
+            md_lines.append("")
+            for error in data['errors']:
+                md_lines.append(f"- {error}")
+            md_lines.append("")
+        
+        # 警告信息
+        if 'warnings' in data and data['warnings']:
+            md_lines.append("## ⚠️ 警告信息")
+            md_lines.append("")
+            for warning in data['warnings']:
+                md_lines.append(f"- {warning}")
+            md_lines.append("")
         
         # 最终结果
         if 'final_results' in data and data['final_results']:
             md_lines.append("## 🎯 最终结果")
             md_lines.append("")
-            
-            results = data['final_results']
-            if isinstance(results, dict):
-                for key, value in results.items():
-                    md_lines.append(f"- **{key}**: {value}")
-            else:
-                md_lines.append(f"```\n{results}\n```")
-            md_lines.append("")
-        
-        # 辩论记录
-        if 'debate_records' in data and data['debate_records']:
-            md_lines.append("## 💬 辩论记录")
-            md_lines.append("")
-            
-            for i, record in enumerate(data['debate_records'], 1):
-                md_lines.append(f"### 辩论轮次 {i}")
+            for key, value in data['final_results'].items():
+                md_lines.append(f"### {key}")
                 md_lines.append("")
-                if record.get('timestamp'):
-                    md_lines.append(f"**时间**: {record['timestamp']}")
-                    md_lines.append("")
-                if record.get('content'):
-                    md_lines.append("**内容**:")
-                    md_lines.append("")
-                    md_lines.append(f"> {record['content']}")
-                    md_lines.append("")
+                md_lines.append(f"```")
+                md_lines.append(str(value))
+                md_lines.append("```")
+                md_lines.append("")
         
         # 生成时间戳
         md_lines.append("---")
@@ -231,6 +194,33 @@ class JSONToMarkdownConverter:
             print(f"❌ 转换过程中发生错误: {e}")
             return None
     
+    def convert_all_json(self) -> List[str]:
+        """转换所有JSON文件
+        
+        Returns:
+            生成的Markdown文件路径列表
+        """
+        try:
+            # 查找dump目录下的所有JSON文件
+            json_files = list(self.dump_dir.glob("session_*.json"))
+            
+            if not json_files:
+                print(f"❌ 在 {self.dump_dir} 目录下未找到JSON文件")
+                return []
+            
+            results = []
+            for json_file in json_files:
+                print(f"📄 转换文件: {json_file.name}")
+                result = self.convert_json_to_markdown(str(json_file))
+                if result:
+                    results.append(result)
+            
+            return results
+            
+        except Exception as e:
+            print(f"❌ 批量转换过程中发生错误: {e}")
+            return []
+    
     def list_available_json_files(self) -> List[str]:
         """列出可用的JSON文件
         
@@ -254,6 +244,7 @@ def main():
     )
     parser.add_argument("-f", "--file", help="指定要转换的JSON文件路径")
     parser.add_argument("-l", "--latest", action="store_true", help="转换最新的JSON文件")
+    parser.add_argument("-a", "--all", action="store_true", help="转换所有JSON文件")
     parser.add_argument("--list", action="store_true", help="列出所有可用的JSON文件")
     parser.add_argument("-d", "--dump-dir", default="src/dump", help="dump文件夹路径")
     
@@ -272,6 +263,14 @@ def main():
                 print(f"  {i}. {file_name} ({file_time.strftime('%Y-%m-%d %H:%M:%S')})")
         else:
             print("❌ 未找到任何JSON文件")
+    
+    elif args.all:
+        # 转换所有文件
+        results = converter.convert_all_json()
+        if results:
+            print(f"🎉 批量转换完成，共生成 {len(results)} 个Markdown文件")
+        else:
+            print("❌ 批量转换失败")
     
     elif args.latest:
         # 转换最新文件

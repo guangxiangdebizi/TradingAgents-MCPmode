@@ -17,7 +17,7 @@
 - **🌍 多市场支持**: 美股(US)、A股(CN)、港股(HK)
 - **🗣️ 自然语言**: 支持自然语言查询，无需指定市场和日期
 - **📈 实时决策**: 基于最新数据的交易建议
-- **📄 多格式报告**: 支持HTML、Word、Markdown、PDF等多种格式导出
+- **📄 多格式报告**: 支持Markdown、PDF、DOCX等多种格式导出
 
 ## 🏗️ 系统架构
 
@@ -317,6 +317,272 @@ P/E比率为28.5，略高于行业平均水平。营收增长稳定，现金流�
 - `DEBUG_MODE`: 调试模式开关
 - `VERBOSE_LOGGING`: 详细日志开关
 
+## 📊 报告导出功能
+
+系统提供了强大的报告导出功能，支持将JSON分析数据转换为多种格式的美观报告。
+
+### 🎨 支持的导出格式
+
+1. **Markdown (*.md)** - 轻量级标记语言格式
+   - 总是可用，无需额外依赖
+   - 支持代码块、表格、链接等
+   - 表情符号正常显示
+
+2. **PDF (*.pdf)** - 便携文档格式
+   - 需要安装: `pip install reportlab markdown2`
+   - 专业排版，适合打印和分享
+   - 中文字体支持（微软雅黑）
+   - 表情符号使用 Segoe UI Emoji 字体
+
+3. **DOCX (*.docx)** - Microsoft Word文档
+   - 需要安装: `pip install python-docx`
+   - 完全兼容 Microsoft Word
+   - 支持字体、样式、格式
+   - 表情符号使用 Segoe UI Emoji 字体
+
+### 🚀 使用导出工具
+
+#### 统一导出工具
+
+```bash
+# 查看所有可用的JSON文件
+python -m src.dumptools.export_tool --list
+
+# 导出最新文件为Markdown格式
+python -m src.dumptools.export_tool --format markdown --latest
+
+# 导出最新文件为PDF格式
+python -m src.dumptools.export_tool --format pdf --latest
+
+# 导出最新文件为DOCX格式
+python -m src.dumptools.export_tool --format docx --latest
+
+# 导出最新文件为所有支持的格式
+python -m src.dumptools.export_tool --format all --latest
+
+# 批量导出所有JSON文件
+python -m src.dumptools.export_tool --format all --all
+
+# 导出指定文件
+python -m src.dumptools.export_tool --format pdf --file src/dump/session_20250730_104218.json
+```
+
+<details>
+<summary><strong>🔧 单独使用各转换器</strong></summary>
+
+**推荐方法（Windows兼容）**：
+```bash
+# Markdown转换器
+python src/dumptools/json_to_markdown.py --latest
+python src/dumptools/json_to_markdown.py --all
+python src/dumptools/json_to_markdown.py --list
+
+# PDF转换器
+python src/dumptools/json_to_pdf.py --latest
+python src/dumptools/json_to_pdf.py --all
+
+# DOCX转换器
+python src/dumptools/json_to_docx.py --latest
+python src/dumptools/json_to_docx.py --all
+```
+
+**备选方法（需要完整依赖）**：
+```bash
+# 如果已安装所有依赖，可使用模块方式
+python -m src.dumptools.json_to_markdown --latest
+python -m src.dumptools.json_to_pdf --latest
+python -m src.dumptools.json_to_docx --latest
+```
+
+</details>
+
+### 📁 输出目录结构
+
+导出的文件会保存在对应的目录中：
+
+```
+TradingAgents-MCPmode/
+├── markdown_reports/          # Markdown报告目录
+│   ├── session_20250730_104218.md
+│   └── session_20250730_112128.md
+├── pdf_reports/              # PDF报告目录
+│   ├── session_20250730_104218.pdf
+│   └── session_20250730_112128.pdf
+└── docx_reports/             # DOCX报告目录
+    ├── session_20250730_104218.docx
+    └── session_20250730_112128.docx
+```
+
+### 🔄 导出流程架构
+
+系统采用一致性的两步导出流程，确保所有格式的报告具有相同的内容结构和格式标准：
+
+```
+JSON数据 → Markdown格式 → 目标格式(PDF/DOCX)
+```
+
+#### 流程说明
+1. **第一步**：JSON转Markdown
+   - 统一的数据解析和格式化
+   - 标准化的内容结构
+   - 一致的表情符号和特殊字符处理
+
+2. **第二步**：Markdown转目标格式
+   - **PDF转换**：使用WeasyPrint（首选）或ReportLab（备选）
+   - **DOCX转换**：使用python-docx库
+   - 保持与Markdown相同的视觉格式
+
+#### 优势
+- **一致性**：所有格式报告内容结构完全一致
+- **可维护性**：只需维护一套Markdown生成逻辑
+- **扩展性**：添加新格式只需实现Markdown转换器
+- **质量保证**：统一的内容验证和格式化标准
+
+### 🎨 报告样式特性
+
+<details>
+<summary><strong>📝 Markdown格式</strong></summary>
+
+- 使用标准Markdown语法
+- 支持表情符号
+- 代码块高亮
+- 清晰的层级结构
+
+</details>
+
+<details>
+<summary><strong>📄 PDF格式</strong></summary>
+
+**字体配置**:
+- 中文内容：微软雅黑 (Microsoft YaHei)
+- 英文内容：Helvetica
+- 代码内容：Courier
+- 表情符号：Segoe UI Emoji
+
+**页面设置**:
+- 页面大小：A4
+- 页边距：72pt
+- 自动分页
+
+**样式层级**:
+- 标题：20pt，居中，加粗
+- 一级标题：16pt，加粗
+- 二级标题：14pt，加粗
+- 正文：11pt，两端对齐
+- 代码：9pt，等宽字体
+
+</details>
+
+<details>
+<summary><strong>📃 DOCX格式</strong></summary>
+
+**字体配置**:
+- 中文内容：微软雅黑 (Microsoft YaHei)
+- 代码内容：Consolas
+- 表情符号：Segoe UI Emoji
+
+**格式特性**:
+- 标题居中，加粗
+- 段落间距适中
+- 代码块缩进
+- 完全兼容Microsoft Word
+
+</details>
+
+### 🔧 依赖安装
+
+<details>
+<summary><strong>📦 一键安装（推荐）</strong></summary>
+
+```bash
+# 安装所有项目依赖（包括导出工具）
+pip install -r requirements.txt
+```
+
+</details>
+
+<details>
+<summary><strong>⚙️ 仅安装导出工具依赖</strong></summary>
+
+```bash
+# 核心导出依赖（必需）
+pip install markdown2 python-docx reportlab
+
+# PDF生成首选依赖（可选，Windows可能需要额外配置）
+pip install weasyprint
+
+# 如果WeasyPrint安装失败，可以跳过，系统会自动使用reportlab备选方案
+```
+
+**依赖说明**：
+- **markdown2**: Markdown格式生成（核心依赖）
+- **python-docx**: DOCX格式生成
+- **reportlab**: PDF生成备选方案，兼容性好
+- **weasyprint**: PDF生成首选方案，支持CSS样式，但Windows下可能需要额外配置
+
+</details>
+
+### ⚠️ 注意事项
+
+1. **字体支持**：确保系统已安装微软雅黑和Segoe UI Emoji字体
+2. **文件权限**：确保输出目录有写入权限
+3. **内容长度**：超长内容会被自动截断以保证文档质量
+4. **特殊字符**：表情符号和特殊字符使用专门字体以确保正确显示
+
+### 🔧 故障排除
+
+<details>
+<summary><strong>⚠️ Windows系统WeasyPrint错误</strong></summary>
+
+**问题现象**：
+```
+WeasyPrint could not import some external libraries
+OSError: dlopen() failed to load a library: libgobject-2.0-0
+```
+
+**原因**：WeasyPrint在Windows上需要GTK+库，但系统未安装。
+
+**解决方案**：
+
+1. **推荐方案**：使用直接脚本执行（绕过依赖问题）
+   ```bash
+   # 直接运行脚本，避免包导入问题
+   python src/dumptools/json_to_pdf.py --latest
+   python src/dumptools/json_to_docx.py --latest
+   python src/dumptools/export_tool.py --format pdf --latest
+   ```
+
+2. **备选方案**：安装WeasyPrint完整依赖
+   ```bash
+   # 方法1：使用conda（推荐）
+   conda install -c conda-forge weasyprint
+   
+   # 方法2：使用pip + GTK手动安装
+   # 需要先安装GTK+库，参考官方文档
+   pip install weasyprint
+   ```
+
+3. **最简方案**：仅使用ReportLab（PDF质量略低）
+   ```bash
+   pip uninstall weasyprint  # 移除有问题的WeasyPrint
+   pip install reportlab     # 确保安装ReportLab
+   ```
+
+</details>
+
+<details>
+<summary><strong>🔍 依赖检查工具</strong></summary>
+
+```bash
+# 检查已安装的导出相关依赖
+python -c "import markdown2; print('✅ markdown2')"
+python -c "import docx; print('✅ python-docx')"
+python -c "import reportlab; print('✅ reportlab')"
+python -c "import weasyprint; print('✅ weasyprint')"  # 可能失败
+```
+
+</details>
+
 ## 🔧 开发指南
 
 ### 项目结构
@@ -343,10 +609,10 @@ TradingAgents-MCPmode/
     │   └── risk_management.py  # 风险管理智能体
     └── dumptools/         # 报告导出工具
         ├── __init__.py
-        ├── html_converter.py    # HTML报告转换器
-        ├── word_converter.py    # Word报告转换器
-        ├── markdown_converter.py # Markdown报告转换器
-        └── pdf_converter.py     # PDF报告转换器
+        ├── json_to_markdown.py  # Markdown转换器
+        ├── json_to_pdf.py       # PDF转换器
+        ├── json_to_docx.py      # DOCX转换器
+        └── export_tool.py       # 统一导出工具
 ```
 
 ### 添加新智能体
@@ -366,9 +632,13 @@ TradingAgents-MCPmode/
 ### 添加新报告格式
 
 1. 在 `src/dumptools/` 目录下创建新的转换器文件
-2. 实现转换逻辑，参考现有转换器的接口
+2. 实现转换逻辑，参考现有转换器的接口：
+   - 继承或参考现有转换器的结构
+   - 实现 `convert_json_to_[format]()` 方法
+   - 实现 `convert_latest_json()` 方法
+   - 实现 `convert_all_json()` 方法
 3. 在 `src/dumptools/__init__.py` 中导入新转换器
-4. 在 `main.py` 中添加新格式的选项和处理逻辑
+4. 在 `export_tool.py` 中添加新格式支持
 5. 更新README文档中的格式说明
 
 ## 🐛 故障排除

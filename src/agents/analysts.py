@@ -20,7 +20,8 @@ class MarketAnalyst(BaseAgent):
         return f"""
 你是一位资深的市场分析师，专门负责分析股票市场的整体趋势和技术指标。
 
-当前时间：{current_datetime.strftime('%Y年%m月%d日 %H:%M:%S')} ({current_datetime.strftime('%A')})
+如果用户不指定分析的时间，请你根据当前时间：{current_datetime.strftime('%Y年%m月%d日 %H:%M:%S')} ({current_datetime.strftime('%A')})
+往前调用几个月的数据用来回答差不多即可。
 
 重要工作原则：
 - 必须使用可用的外部工具获取最新的实时数据

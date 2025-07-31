@@ -23,11 +23,15 @@ typing-extensions>=4.5.0
 asyncio-mqtt>=0.13.0
 # uvloop>=0.17.0  # 仅支持Unix系统，Windows用户请注释此行
 
-# 报告生成功能 (可选依赖)
-markdown>=3.4.0
-python-docx>=0.8.11  # 用于生成Word文档
-pdfkit>=1.0.0       # 用于生成PDF文档 (还需要安装wkhtmltopdf)
-reportlab>=4.0.0
+# 导出工具依赖 (用于生成分析报告)
+# 核心导出依赖
+markdown2>=2.4.0     # Markdown生成 (比markdown库更快更稳定)
+python-docx>=0.8.11  # DOCX文档生成
+reportlab>=4.0.0     # PDF生成 (备选方案)
+
+# PDF生成首选依赖 (Windows可能需要额外配置)
+weasyprint>=61.0     # PDF生成首选方案，支持CSS样式
+# 注意：Windows用户如遇到WeasyPrint问题，可注释上行，仅使用reportlab
 
 # 开发工具
 pytest>=7.0.0

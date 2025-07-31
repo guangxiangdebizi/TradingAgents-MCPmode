@@ -20,7 +20,6 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from src.workflow_orchestrator import WorkflowOrchestrator
 from src.agent_states import AgentState
-from src.json_to_markdown import JSONToMarkdownConverter
 
 
 def setup_logging(debug_mode: bool = False, log_file: Optional[str] = None):
@@ -70,39 +69,7 @@ def print_analysis_result(result):
     
     print("\n" + "="*80)
     
-    # 自动生成HTML报告
-    try:
-        from src.report_generator import ReportGenerator
-        
-        # 准备报告数据
-        report_data = {
-            'user_query': safe_get('user_query'),
-            'market_report': safe_get('market_report'),
-            'sentiment_report': safe_get('sentiment_report'),
-            'news_report': safe_get('news_report'),
-            'fundamentals_report': safe_get('fundamentals_report'),
-            'investment_plan': safe_get('investment_plan'),
-            'trader_investment_plan': safe_get('trader_investment_plan'),
-            'final_trade_decision': safe_get('final_trade_decision'),
-            'investment_debate_state': safe_get('investment_debate_state', {}),
-            'risk_debate_state': safe_get('risk_debate_state', {}),
-            'errors': safe_get_list('errors'),
-            'warnings': safe_get_list('warnings'),
-            'mcp_tool_calls': safe_get_list('mcp_tool_calls'),
-            'agent_execution_history': safe_get_list('agent_execution_history')
-        }
-        
-        # 生成HTML报告
-        generator = ReportGenerator()
-        html_file = generator.generate_report(report_data, 'html')
-        
-        if html_file:
-            print(f"\n🌐 HTML报告已自动生成: {html_file}")
-            print("💡 您可以在浏览器中打开此文件查看美观的分析报告")
-        
-    except Exception as e:
-        print(f"\n⚠️ HTML报告生成失败: {e}")
-        print("💡 请确保已安装markdown库: pip install markdown")
+
     
     # 基本信息
     print(f"🏢 用户问题: {safe_get('user_query')}")
@@ -361,18 +328,7 @@ async def run_interactive_mode(config_file: str):
                 # 显示结果
                 print_analysis_result(result)
                 
-                # 询问是否生成Markdown报告
-                generate_report = input("\n📊 是否生成Markdown分析报告？(Y/n): ").strip().lower()
-                if generate_report not in ['n', 'no']:
-                    try:
-                        converter = JSONToMarkdownConverter()
-                        md_file = converter.convert_latest_json()
-                        if md_file:
-                            print(f"🎉 Markdown分析报告生成完成: {md_file}")
-                        else:
-                            print("❌ Markdown报告生成失败")
-                    except Exception as e:
-                        print(f"❌ Markdown报告生成失败: {e}")
+
                 
                 # 询问是否继续
                 continue_analysis = input("\n🔄 是否继续提问？(y/N): ").strip().lower()
