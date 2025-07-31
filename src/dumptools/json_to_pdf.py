@@ -1,66 +1,35 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-JSON to PDF Converter (via Markdown)
-采用两步转换流程：JSON → Markdown → PDF
+JSON to PDF Converter
+直接从JSON数据生成PDF报告，支持中文字符
 """
 
 import json
 import os
-import tempfile
 from datetime import datetime
 from pathlib import Path
 from typing import Dict, Any, List, Optional
 
+# 检查ReportLab可用性
 try:
-    import markdown2
-    from weasyprint import HTML, CSS
-    from weasyprint.fonts import FontConfiguration
-    WEASYPRINT_AVAILABLE = True
+    from reportlab.lib.pagesizes import A4
+    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+    from reportlab.lib.units import inch, cm
+    from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, PageBreak
+    from reportlab.lib import colors
+    from reportlab.lib.enums import TA_LEFT, TA_CENTER, TA_JUSTIFY
+    from reportlab.pdfbase import pdfmetrics
+    from reportlab.pdfbase.ttfonts import TTFont
+    import platform
+    REPORTLAB_AVAILABLE = True
 except ImportError:
-    WEASYPRINT_AVAILABLE = False
-    try:
-        import markdown2
-        from reportlab.lib.pagesizes import letter, A4
-        from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-        from reportlab.lib.units import inch
-        from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
-        from reportlab.lib import colors
-        from reportlab.pdfbase import pdfmetrics
-        from reportlab.pdfbase.ttfonts import TTFont
-        from reportlab.lib.enums import TA_LEFT, TA_CENTER, TA_JUSTIFY
-        import re
-        REPORTLAB_AVAILABLE = True
-    except ImportError:
-        REPORTLAB_AVAILABLE = False
-        print("⚠️ PDF导出依赖未安装，请选择以下之一:")
-        print("📦 推荐方案: pip install markdown2 weasyprint")
-        print("📦 备选方案: pip install markdown2 reportlab")
-
-try:
-    from .json_to_markdown import JSONToMarkdownConverter
-except ImportError:
-    # 如果相对导入失败，尝试绝对导入
-    import sys
-    import os
-    from pathlib import Path
-    
-    # 添加当前目录到路径
-    current_dir = Path(__file__).parent
-    sys.path.insert(0, str(current_dir))
-    
-    # 尝试导入
-    try:
-        from json_to_markdown import JSONToMarkdownConverter
-    except ImportError:
-        # 如果还是失败，尝试从上级目录导入
-        parent_dir = current_dir.parent
-        sys.path.insert(0, str(parent_dir))
-        from dumptools.json_to_markdown import JSONToMarkdownConverter
+    REPORTLAB_AVAILABLE = False
+    print("❌ PDF导出依赖未安装，请安装: pip install reportlab")
 
 
 class JSONToPDFConverter:
-    """JSON转PDF转换器（通过Markdown中间格式）"""
+    """JSON转PDF转换器（直接转换，支持中文字符）"""
     
     def __init__(self, dump_dir: str = "src/dump"):
         """初始化转换器
@@ -68,8 +37,8 @@ class JSONToPDFConverter:
         Args:
             dump_dir: dump文件夹路径
         """
-        if not (WEASYPRINT_AVAILABLE or REPORTLAB_AVAILABLE):
-            raise ImportError("PDF导出依赖未安装，请安装: pip install markdown2 weasyprint 或 pip install markdown2 reportlab")
+        if not REPORTLAB_AVAILABLE:
+            raise ImportError("PDF导出依赖未安装，请安装: pip install reportlab")
             
         self.dump_dir = Path(dump_dir)
         self.output_dir = Path("pdf_reports")
@@ -77,247 +46,331 @@ class JSONToPDFConverter:
         # 确保输出目录存在
         self.output_dir.mkdir(exist_ok=True)
         
-        # 创建Markdown转换器
-        self.markdown_converter = JSONToMarkdownConverter(dump_dir)
+        # 注册中文字体
+        self._register_chinese_fonts()
     
-    def _get_css_styles(self) -> str:
-        """获取PDF样式表"""
-        return """
-        @page {
-            size: A4;
-            margin: 2cm;
-            @bottom-right {
-                content: counter(page) "/" counter(pages);
-            }
-        }
-        
-        body {
-            font-family: "Microsoft YaHei", "Segoe UI", Arial, sans-serif;
-            font-size: 11pt;
-            line-height: 1.6;
-            color: #333;
-        }
-        
-        h1 {
-            font-size: 20pt;
-            font-weight: bold;
-            text-align: center;
-            margin-bottom: 1em;
-            color: #2c3e50;
-        }
-        
-        h2 {
-            font-size: 16pt;
-            font-weight: bold;
-            margin-top: 1.5em;
-            margin-bottom: 0.5em;
-            color: #34495e;
-            border-bottom: 2px solid #3498db;
-            padding-bottom: 0.2em;
-        }
-        
-        h3 {
-            font-size: 14pt;
-            font-weight: bold;
-            margin-top: 1em;
-            margin-bottom: 0.5em;
-            color: #34495e;
-        }
-        
-        p {
-            margin-bottom: 0.5em;
-            text-align: justify;
-        }
-        
-        ul, ol {
-            margin-bottom: 1em;
-            padding-left: 2em;
-        }
-        
-        li {
-            margin-bottom: 0.3em;
-        }
-        
-        blockquote {
-            margin: 1em 0;
-            padding: 0.5em 1em;
-            background-color: #f8f9fa;
-            border-left: 4px solid #3498db;
-            font-style: italic;
-        }
-        
-        code {
-            font-family: "Consolas", "Monaco", monospace;
-            font-size: 9pt;
-            background-color: #f8f9fa;
-            padding: 0.2em 0.4em;
-            border-radius: 3px;
-        }
-        
-        pre {
-            background-color: #f8f9fa;
-            padding: 1em;
-            border-radius: 5px;
-            border: 1px solid #e9ecef;
-            overflow-x: auto;
-            margin: 1em 0;
-        }
-        
-        pre code {
-            background-color: transparent;
-            padding: 0;
-        }
-        
-        .emoji {
-            font-family: "Segoe UI Emoji", "Apple Color Emoji", "Noto Color Emoji";
-        }
-        
-        hr {
-            border: none;
-            border-top: 1px solid #bdc3c7;
-            margin: 2em 0;
-        }
-        
-        .footer {
-            text-align: center;
-            font-style: italic;
-            color: #7f8c8d;
-            margin-top: 2em;
-        }
-        """
-    
-    def _markdown_to_pdf_weasyprint(self, markdown_content: str, output_path: str) -> bool:
-        """使用WeasyPrint将Markdown转换为PDF"""
+    def _register_chinese_fonts(self):
+        """注册中文字体"""
         try:
-            # 将Markdown转换为HTML
-            html_content = markdown2.markdown(
-                markdown_content,
-                extras=[
-                    'fenced-code-blocks',
-                    'tables',
-                    'break-on-newline',
-                    'strike',
-                    'task_list'
+            # 根据操作系统选择合适的中文字体
+            system = platform.system()
+            
+            if system == "Windows":
+                # Windows系统字体路径
+                font_paths = [
+                    "C:/Windows/Fonts/msyh.ttc",  # 微软雅黑
+                    "C:/Windows/Fonts/simsun.ttc",  # 宋体
+                    "C:/Windows/Fonts/simhei.ttf",  # 黑体
                 ]
-            )
+            elif system == "Darwin":  # macOS
+                font_paths = [
+                    "/System/Library/Fonts/PingFang.ttc",
+                    "/System/Library/Fonts/STHeiti Light.ttc",
+                ]
+            else:  # Linux
+                font_paths = [
+                    "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+                    "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf",
+                ]
             
-            # 添加HTML框架和样式
-            full_html = f"""
-            <!DOCTYPE html>
-            <html>
-            <head>
-                <meta charset="UTF-8">
-                <style>
-                {self._get_css_styles()}
-                </style>
-            </head>
-            <body>
-                {html_content}
-            </body>
-            </html>
-            """
+            # 尝试注册第一个可用的字体
+            for font_path in font_paths:
+                if os.path.exists(font_path):
+                    try:
+                        pdfmetrics.registerFont(TTFont('ChineseFont', font_path))
+                        self.chinese_font = 'ChineseFont'
+                        print(f"✅ 成功注册中文字体: {font_path}")
+                        return
+                    except Exception as e:
+                        print(f"⚠️ 注册字体失败 {font_path}: {e}")
+                        continue
             
-            # 生成PDF
-            HTML(string=full_html).write_pdf(output_path)
-            return True
-            
-        except Exception as e:
-            print(f"⚠️ WeasyPrint转换失败: {e}")
-            return False
-    
-    def _markdown_to_pdf_reportlab(self, markdown_content: str, output_path: str) -> bool:
-        """使用ReportLab将Markdown转换为PDF（备选方案）"""
-        try:
-            # 简化的Markdown解析和转换
-            doc = SimpleDocTemplate(output_path, pagesize=A4)
-            story = []
-            
-            # 简单处理Markdown内容
-            lines = markdown_content.split('\n')
-            for line in lines:
-                line = line.strip()
-                if not line:
-                    story.append(Spacer(1, 6))
-                elif line.startswith('# '):
-                    # 一级标题
-                    story.append(Paragraph(line[2:], self._get_title_style()))
-                elif line.startswith('## '):
-                    # 二级标题
-                    story.append(Paragraph(line[3:], self._get_heading_style()))
-                elif line.startswith('### '):
-                    # 三级标题
-                    story.append(Paragraph(line[4:], self._get_subheading_style()))
-                elif line.startswith('- ') or line.startswith('* '):
-                    # 列表项
-                    story.append(Paragraph(f"• {line[2:]}", self._get_normal_style()))
-                elif line.startswith('> '):
-                    # 引用
-                    story.append(Paragraph(line[2:], self._get_quote_style()))
-                elif line.startswith('```'):
-                    # 代码块（简化处理）
-                    continue
-                else:
-                    # 正文
-                    if line:
-                        story.append(Paragraph(line, self._get_normal_style()))
-            
-            doc.build(story)
-            return True
+            # 如果没有找到中文字体，使用默认字体
+            print("⚠️ 未找到中文字体，将使用默认字体")
+            self.chinese_font = 'Helvetica'
             
         except Exception as e:
-            print(f"⚠️ ReportLab转换失败: {e}")
-            return False
-    
-    def _get_title_style(self):
-        """获取标题样式"""
-        return ParagraphStyle(
-            'Title',
+            print(f"⚠️ 字体注册过程出错: {e}")
+            self.chinese_font = 'Helvetica'
+        
+    def _get_styles(self):
+        """获取PDF样式"""
+        styles = getSampleStyleSheet()
+        
+        # 标题样式
+        title_style = ParagraphStyle(
+            'CustomTitle',
+            parent=styles['Title'],
             fontSize=20,
-            spaceAfter=12,
+            spaceAfter=20,
             alignment=TA_CENTER,
-            fontName='Helvetica-Bold'
+            fontName=self.chinese_font,
+            textColor=colors.HexColor('#2c3e50')
         )
-    
-    def _get_heading_style(self):
-        """获取一级标题样式"""
-        return ParagraphStyle(
-            'Heading1',
+        
+        # 一级标题样式
+        heading1_style = ParagraphStyle(
+            'CustomHeading1',
+            parent=styles['Heading1'],
             fontSize=16,
             spaceAfter=12,
-            fontName='Helvetica-Bold'
+            spaceBefore=12,
+            fontName=self.chinese_font,
+            textColor=colors.HexColor('#34495e')
         )
-    
-    def _get_subheading_style(self):
-        """获取二级标题样式"""
-        return ParagraphStyle(
-            'Heading2',
+        
+        # 二级标题样式
+        heading2_style = ParagraphStyle(
+            'CustomHeading2',
+            parent=styles['Heading2'],
             fontSize=14,
             spaceAfter=10,
-            fontName='Helvetica-Bold'
+            spaceBefore=10,
+            fontName=self.chinese_font,
+            textColor=colors.HexColor('#34495e')
         )
-    
-    def _get_normal_style(self):
-        """获取正文样式"""
-        return ParagraphStyle(
-            'Normal',
+        
+        # 正文样式
+        normal_style = ParagraphStyle(
+            'CustomNormal',
+            parent=styles['Normal'],
             fontSize=11,
             spaceAfter=6,
             alignment=TA_JUSTIFY,
-            fontName='Helvetica'
+            fontName=self.chinese_font,
+            leading=14
         )
-    
-    def _get_quote_style(self):
-        """获取引用样式"""
-        return ParagraphStyle(
-            'Quote',
+        
+        # 列表样式
+        bullet_style = ParagraphStyle(
+            'CustomBullet',
+            parent=styles['Normal'],
+            fontSize=11,
+            spaceAfter=4,
+            leftIndent=20,
+            fontName=self.chinese_font
+        )
+        
+        # 引用样式
+        quote_style = ParagraphStyle(
+            'CustomQuote',
+            parent=styles['Normal'],
             fontSize=11,
             spaceAfter=6,
             leftIndent=20,
-            fontName='Helvetica-Oblique'
+            rightIndent=20,
+            fontName=self.chinese_font,
+            textColor=colors.HexColor('#666666'),
+            borderColor=colors.HexColor('#3498db'),
+            borderWidth=2,
+            borderPadding=10
         )
+        
+        # 代码样式
+        code_style = ParagraphStyle(
+            'CustomCode',
+            parent=styles['Normal'],
+            fontSize=9,
+            spaceAfter=6,
+            leftIndent=20,
+            fontName='Courier',
+            backColor=colors.HexColor('#f8f9fa')
+        )
+        
+        return {
+            'title': title_style,
+            'heading1': heading1_style,
+            'heading2': heading2_style,
+            'normal': normal_style,
+            'bullet': bullet_style,
+            'quote': quote_style,
+            'code': code_style
+        }
+    
+    def _clean_text(self, text: str) -> str:
+        """清理文本，处理特殊字符"""
+        if not text:
+            return ""
+        
+        # 转换为字符串并清理
+        text = str(text)
+        
+        # 处理emoji和特殊字符，替换为文本描述
+        emoji_map = {
+            '📄': '[文件]',
+            '📈': '[图表]',
+            '📉': '[图表]',
+            '✅': '[成功]',
+            '❌': '[错误]',
+            '⚠️': '[警告]',
+            '🎯': '[目标]',
+            '🔍': '[搜索]',
+            '🤖': '[机器人]',
+            '📦': '[包]',
+            '📊': '[统计]',
+            '📋': '[列表]',
+            '🔧': '[工具]'
+        }
+        
+        for emoji, replacement in emoji_map.items():
+            text = text.replace(emoji, replacement)
+        
+        return text.strip()
+    
+    def _generate_pdf_content(self, data: Dict[str, Any], story: list, styles: dict):
+        """生成PDF内容"""
+        # 标题
+        session_id = data.get('session_id', 'Unknown')
+        title_text = self._clean_text(f"交易分析报告 - {session_id}")
+        story.append(Paragraph(title_text, styles['title']))
+        story.append(Spacer(1, 20))
+        
+        # 基本信息
+        heading_text = self._clean_text("[列表] 基本信息")
+        story.append(Paragraph(heading_text, styles['heading1']))
+        
+        basic_info = [
+            f"会话ID: {data.get('session_id', 'N/A')}",
+            f"创建时间: {data.get('created_at', 'N/A')}",
+            f"更新时间: {data.get('updated_at', 'N/A')}",
+            f"状态: {data.get('status', 'N/A')}"
+        ]
+        
+        for info in basic_info:
+            clean_info = self._clean_text(f"• {info}")
+            story.append(Paragraph(clean_info, styles['bullet']))
+        
+        story.append(Spacer(1, 15))
+        
+        # 用户查询
+        if 'user_query' in data and data['user_query']:
+            heading_text = self._clean_text("[搜索] 用户查询")
+            story.append(Paragraph(heading_text, styles['heading1']))
+            
+            query_text = self._clean_text(data['user_query'])
+            story.append(Paragraph(query_text, styles['quote']))
+            story.append(Spacer(1, 15))
+        
+        # 智能体执行情况
+        if 'agents' in data and data['agents']:
+            heading_text = self._clean_text("[机器人] 智能体执行情况")
+            story.append(Paragraph(heading_text, styles['heading1']))
+            
+            for agent in data['agents']:
+                agent_name = agent.get('agent_name', 'Unknown Agent')
+                agent_heading = self._clean_text(agent_name)
+                story.append(Paragraph(agent_heading, styles['heading2']))
+                
+                # 智能体信息
+                agent_info = [
+                    f"状态: {agent.get('status', 'N/A')}",
+                    f"开始时间: {agent.get('start_time', 'N/A')}",
+                ]
+                
+                if agent.get('end_time'):
+                    agent_info.append(f"结束时间: {agent.get('end_time')}")
+                
+                agent_info.append(f"执行结果: {agent.get('result', 'N/A')}")
+                
+                for info in agent_info:
+                    clean_info = self._clean_text(f"• {info}")
+                    story.append(Paragraph(clean_info, styles['bullet']))
+                
+                # 执行内容
+                if agent.get('action'):
+                    story.append(Paragraph("执行内容:", styles['normal']))
+                    action_text = self._clean_text(str(agent['action']))
+                    if len(action_text) > 1000:
+                        action_text = action_text[:1000] + "..."
+                    story.append(Paragraph(action_text, styles['code']))
+                
+                story.append(Spacer(1, 10))
+        
+        # 阶段信息
+        if 'stages' in data and data['stages']:
+            heading_text = self._clean_text("[统计] 执行阶段")
+            story.append(Paragraph(heading_text, styles['heading1']))
+            
+            for i, stage in enumerate(data['stages'], 1):
+                stage_heading = self._clean_text(f"阶段 {i}")
+                story.append(Paragraph(stage_heading, styles['heading2']))
+                
+                stage_content = self._clean_text(f"内容: {stage}")
+                story.append(Paragraph(stage_content, styles['normal']))
+                story.append(Spacer(1, 8))
+        
+        # MCP调用情况
+        if 'mcp_calls' in data and data['mcp_calls']:
+            heading_text = self._clean_text("[工具] MCP工具调用")
+            story.append(Paragraph(heading_text, styles['heading1']))
+            
+            for i, call in enumerate(data['mcp_calls'], 1):
+                call_heading = self._clean_text(f"调用 {i}")
+                story.append(Paragraph(call_heading, styles['heading2']))
+                
+                call_info = [
+                    f"工具: {call.get('tool', 'N/A')}",
+                    f"时间: {call.get('timestamp', 'N/A')}"
+                ]
+                if call.get('result'):
+                    call_info.append(f"结果: {call['result']}")
+                
+                for info in call_info:
+                    clean_info = self._clean_text(f"• {info}")
+                    story.append(Paragraph(clean_info, styles['bullet']))
+                
+                story.append(Spacer(1, 8))
+        
+        # 错误信息
+        if 'errors' in data and data['errors']:
+            heading_text = self._clean_text("[错误] 错误信息")
+            story.append(Paragraph(heading_text, styles['heading1']))
+            
+            for error in data['errors']:
+                error_text = self._clean_text(f"• {error}")
+                story.append(Paragraph(error_text, styles['bullet']))
+            
+            story.append(Spacer(1, 15))
+        
+        # 警告信息
+        if 'warnings' in data and data['warnings']:
+            heading_text = self._clean_text("[警告] 警告信息")
+            story.append(Paragraph(heading_text, styles['heading1']))
+            
+            for warning in data['warnings']:
+                warning_text = self._clean_text(f"• {warning}")
+                story.append(Paragraph(warning_text, styles['bullet']))
+            
+            story.append(Spacer(1, 15))
+        
+        # 最终结果
+        if 'final_results' in data and data['final_results']:
+            heading_text = self._clean_text("[目标] 最终结果")
+            story.append(Paragraph(heading_text, styles['heading1']))
+            
+            for key, value in data['final_results'].items():
+                result_heading = self._clean_text(key)
+                story.append(Paragraph(result_heading, styles['heading2']))
+                
+                result_text = self._clean_text(str(value))
+                if len(result_text) > 1000:
+                    result_text = result_text[:1000] + "..."
+                
+                story.append(Paragraph(result_text, styles['code']))
+                story.append(Spacer(1, 10))
+        
+        # 分隔线和生成时间戳
+        story.append(Spacer(1, 20))
+        separator_text = "─" * 50
+        story.append(Paragraph(separator_text, styles['normal']))
+        
+        timestamp_text = f"报告生成时间: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
+        story.append(Paragraph(timestamp_text, styles['normal']))
+    
+
     
     def convert_json_to_pdf(self, json_file_path: str) -> Optional[str]:
-        """将JSON文件转换为PDF（通过Markdown中间格式）
+        """将JSON文件转换为PDF
         
         Args:
             json_file_path: JSON文件路径
@@ -326,53 +379,36 @@ class JSONToPDFConverter:
             生成的PDF文件路径，失败返回None
         """
         try:
-            # 第一步：将JSON转换为Markdown
-            print(f"📄 步骤1: 将JSON转换为Markdown...")
-            
-            # 使用临时文件存放Markdown内容
-            with tempfile.NamedTemporaryFile(mode='w', suffix='.md', delete=False, encoding='utf-8') as temp_md:
-                temp_md_path = temp_md.name
-            
-            # 调用Markdown转换器
-            md_result = self.markdown_converter.convert_json_to_markdown(json_file_path)
-            if not md_result:
-                print(f"❌ 第一步失败：JSON转换为Markdown失败")
-                return None
-            
-            # 读取生成的Markdown内容
-            with open(md_result, 'r', encoding='utf-8') as f:
-                markdown_content = f.read()
-            
-            # 第二步：将Markdown转换为PDF
-            print(f"📄 步骤2: 将Markdown转换为PDF...")
+            # 读取JSON文件
+            with open(json_file_path, 'r', encoding='utf-8') as f:
+                data = json.load(f)
             
             # 生成输出文件名
             json_filename = Path(json_file_path).stem
             output_file = self.output_dir / f"{json_filename}.pdf"
             
-            # 尝试使用WeasyPrint（推荐）
-            if WEASYPRINT_AVAILABLE:
-                success = self._markdown_to_pdf_weasyprint(markdown_content, str(output_file))
-                if success:
-                    print(f"✅ PDF报告已生成: {output_file}")
-                    return str(output_file)
-                else:
-                    print(f"⚠️ WeasyPrint失败，尝试使用ReportLab...")
+            # 创建PDF文档
+            doc = SimpleDocTemplate(str(output_file), pagesize=A4, 
+                                  leftMargin=inch, rightMargin=inch,
+                                  topMargin=inch, bottomMargin=inch)
+            story = []
             
-            # 备选：使用ReportLab
-            if REPORTLAB_AVAILABLE:
-                success = self._markdown_to_pdf_reportlab(markdown_content, str(output_file))
-                if success:
-                    print(f"✅ PDF报告已生成: {output_file}")
-                    return str(output_file)
-                else:
-                    print(f"❌ ReportLab也失败了")
+            # 获取样式
+            styles = self._get_styles()
             
-            print(f"❌ PDF转换失败：没有可用的PDF生成器")
-            return None
+            # 生成PDF内容
+            self._generate_pdf_content(data, story, styles)
+            
+            # 生成PDF
+            doc.build(story)
+            
+            print(f"✅ PDF报告已生成: {output_file}")
+            return str(output_file)
             
         except Exception as e:
             print(f"❌ PDF转换失败: {e}")
+            import traceback
+            traceback.print_exc()
             return None
     
 

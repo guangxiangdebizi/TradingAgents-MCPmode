@@ -150,18 +150,6 @@ class JSONToMarkdownConverter:
                 md_lines.append(f"- {warning}")
             md_lines.append("")
         
-        # 最终结果
-        if 'final_results' in data and data['final_results']:
-            md_lines.append("## 🎯 最终结果")
-            md_lines.append("")
-            for key, value in data['final_results'].items():
-                md_lines.append(f"### {key}")
-                md_lines.append("")
-                md_lines.append(f"```")
-                md_lines.append(str(value))
-                md_lines.append("```")
-                md_lines.append("")
-        
         # 生成时间戳
         md_lines.append("---")
         md_lines.append("")
