@@ -38,7 +38,7 @@ class MarkdownToDocxConverter:
         """
         self.dump_dir = Path(dump_dir)
         # 保持原有的输出目录设置
-        self.output_dir = self.dump_dir.parent / "output"
+        self.output_dir = self.dump_dir.parent / "src/dump"
         self.output_dir.mkdir(exist_ok=True)
         
         # 初始化Markdown转换器
