@@ -170,11 +170,6 @@ class WorkflowOrchestrator:
         
         result = await self.agents["market_analyst"].process(state, self.progress_manager)
         
-        # 保存分析结果到progress_tracker
-        if self.progress_manager:
-            market_report = result.get('market_report', '') if isinstance(result, dict) else getattr(result, 'market_report', '')
-            self.progress_manager.complete_agent("market_analyst", market_report, success=bool(market_report))
-        
         return result
     
     async def _sentiment_analyst_node(self, state: AgentState) -> AgentState:
@@ -186,11 +181,6 @@ class WorkflowOrchestrator:
             self.progress_manager.start_agent("sentiment_analyst", "市场情绪分析")
         
         result = await self.agents["sentiment_analyst"].process(state, self.progress_manager)
-        
-        # 保存分析结果到progress_tracker
-        if self.progress_manager:
-            sentiment_report = result.get('sentiment_report', '') if isinstance(result, dict) else getattr(result, 'sentiment_report', '')
-            self.progress_manager.complete_agent("sentiment_analyst", sentiment_report, success=bool(sentiment_report))
         
         return result
 
@@ -204,16 +194,11 @@ class WorkflowOrchestrator:
         
         result = await self.agents["news_analyst"].process(state, self.progress_manager)
         
-        # 保存分析结果到progress_tracker
-        if self.progress_manager:
-            news_report = result.get('news_report', '') if isinstance(result, dict) else getattr(result, 'news_report', '')
-            self.progress_manager.complete_agent("news_analyst", news_report, success=bool(news_report))
-        
         return result
 
     async def _fundamentals_analyst_node(self, state: AgentState) -> AgentState:
         """基本面分析师节点"""
-        print("📉 基本面分析师")
+        print("📊 基本面分析师")
         
         # 记录智能体开始工作
         if self.progress_manager:
@@ -221,203 +206,68 @@ class WorkflowOrchestrator:
         
         result = await self.agents["fundamentals_analyst"].process(state, self.progress_manager)
         
-        # 保存分析结果到progress_tracker
-        if self.progress_manager:
-            fundamentals_report = result.get('fundamentals_report', '') if isinstance(result, dict) else getattr(result, 'fundamentals_report', '')
-            self.progress_manager.complete_agent("fundamentals_analyst", fundamentals_report, success=bool(fundamentals_report))
-        
-        print("🎯 第1阶段完成")
         return result
-    
+
     async def _shareholder_analyst_node(self, state: AgentState) -> AgentState:
         """股东分析师节点"""
-        print("📊 股东结构分析师")
+        print("👥 股东分析师")
         
         # 记录智能体开始工作
         if self.progress_manager:
-            self.progress_manager.start_agent("shareholder_analyst", "股东结构和大宗交易分析")
+            self.progress_manager.start_agent("shareholder_analyst", "主要股东和机构持股分析")
         
         result = await self.agents["shareholder_analyst"].process(state, self.progress_manager)
         
-        # 保存分析结果到progress_tracker
-        if self.progress_manager:
-            shareholder_report = result.get('shareholder_report', '') if isinstance(result, dict) else getattr(result, 'shareholder_report', '')
-            self.progress_manager.complete_agent("shareholder_analyst", shareholder_report, success=bool(shareholder_report))
-        
         return result
-    
+
     async def _bull_researcher_node(self, state: AgentState) -> AgentState:
-        """看涨研究员节点"""
-        # 获取当前辩论轮次
-        if isinstance(state, dict):
-            debate_state = state.get('investment_debate_state', {})
-        else:
-            debate_state = state.investment_debate_state
-        current_round = debate_state.get('count', 0) + 1
-        
-        print(f"🐂 第2阶段：看涨研究员第{current_round}轮")
-        if self.progress_manager:
-            self.progress_manager.start_agent("bull_researcher", f"构建看涨论证第{current_round}轮")
+        """多头研究员节点"""
+        print("📈 多头研究员")
+        result = await self.agents["bull_researcher"].process(state, self.progress_manager)
+        return result
 
-        result_state = await self.agents["bull_researcher"].process(state, self.progress_manager)
-
-        if self.progress_manager:
-            if isinstance(result_state, dict):
-                bull_report = result_state.get('investment_debate_state', {}).get('current_response', '')
-            else:
-                bull_report = result_state.investment_debate_state.current_response
-            self.progress_manager.complete_agent("bull_researcher", bull_report, success=bool(bull_report))
-
-        return result_state
-    
     async def _bear_researcher_node(self, state: AgentState) -> AgentState:
-        """看跌研究员节点"""
-        # 获取当前辩论轮次
-        if isinstance(state, dict):
-            debate_state = state.get('investment_debate_state', {})
-        else:
-            debate_state = state.investment_debate_state
-        current_round = debate_state.get('count', 0) + 1
-        
-        print(f"🐻 看跌研究员第{current_round}轮")
-        if self.progress_manager:
-            self.progress_manager.start_agent("bear_researcher", f"构建看跌论证第{current_round}轮")
-
-        result_state = await self.agents["bear_researcher"].process(state, self.progress_manager)
-
-        if self.progress_manager:
-            if isinstance(result_state, dict):
-                bear_report = result_state.get('investment_debate_state', {}).get('current_response', '')
-            else:
-                bear_report = result_state.investment_debate_state.current_response
-            self.progress_manager.complete_agent("bear_researcher", bear_report, success=bool(bear_report))
-
-        return result_state
+        """空头研究员节点"""
+        print("📉 空头研究员")
+        result = await self.agents["bear_researcher"].process(state, self.progress_manager)
+        return result
 
     async def _research_manager_node(self, state: AgentState) -> AgentState:
         """研究经理节点"""
-        print("👔 第3阶段：研究经理")
-        if self.progress_manager:
-            self.progress_manager.start_agent("research_manager", "评估辩论并做出投资决策")
-
-        result_state = await self.agents["research_manager"].process(state, self.progress_manager)
-
-        if self.progress_manager:
-            if isinstance(result_state, dict):
-                investment_plan = result_state.get('investment_plan', '')
-            else:
-                investment_plan = result_state.investment_plan
-            self.progress_manager.complete_agent("research_manager", investment_plan, success=bool(investment_plan))
-
-        return result_state
+        print("🧑‍💼 研究经理")
+        result = await self.agents["research_manager"].process(state, self.progress_manager)
+        return result
 
     async def _trader_node(self, state: AgentState) -> AgentState:
         """交易员节点"""
-        print("💼 交易员")
-        if self.progress_manager:
-            self.progress_manager.start_agent("trader", "制定具体交易计划")
+        print("👨‍💻 交易员")
+        result = await self.agents["trader"].process(state, self.progress_manager)
+        return result
 
-        result_state = await self.agents["trader"].process(state, self.progress_manager)
-
-        if self.progress_manager:
-            if isinstance(result_state, dict):
-                trade_plan = result_state.get('trader_investment_plan', '')
-            else:
-                trade_plan = result_state.trader_investment_plan
-            self.progress_manager.complete_agent("trader", trade_plan, success=bool(trade_plan))
-
-        return result_state
-    
     async def _aggressive_risk_analyst_node(self, state: AgentState) -> AgentState:
         """激进风险分析师节点"""
-        # 获取当前风险辩论轮次
-        if isinstance(state, dict):
-            risk_debate_state = state.get('risk_debate_state', {})
-        else:
-            risk_debate_state = state.risk_debate_state
-        current_round = risk_debate_state.get('count', 0) + 1
-        
-        print(f"🚀 第4阶段：激进风险分析师第{current_round}轮")
-        if self.progress_manager:
-            self.progress_manager.start_agent("aggressive_risk_analyst", f"进行激进风险分析第{current_round}轮")
+        print("🔥 激进风险分析师")
+        result = await self.agents["aggressive_risk_analyst"].process(state, self.progress_manager)
+        return result
 
-        result_state = await self.agents["aggressive_risk_analyst"].process(state, self.progress_manager)
-
-        if self.progress_manager:
-            if isinstance(result_state, dict):
-                risk_report = result_state.get('risk_debate_state', {}).get('current_aggressive_response', '')
-            else:
-                risk_report = result_state.risk_debate_state.current_aggressive_response
-            self.progress_manager.complete_agent("aggressive_risk_analyst", risk_report, success=bool(risk_report))
-
-        return result_state
-    
     async def _safe_risk_analyst_node(self, state: AgentState) -> AgentState:
         """保守风险分析师节点"""
-        # 获取当前风险辩论轮次
-        if isinstance(state, dict):
-            risk_debate_state = state.get('risk_debate_state', {})
-        else:
-            risk_debate_state = state.risk_debate_state
-        current_round = risk_debate_state.get('count', 0) + 1
-        
-        print(f"🛡️ 保守风险分析师第{current_round}轮")
-        if self.progress_manager:
-            self.progress_manager.start_agent("safe_risk_analyst", f"进行保守风险分析第{current_round}轮")
+        print("🛡️ 保守风险分析师")
+        result = await self.agents["safe_risk_analyst"].process(state, self.progress_manager)
+        return result
 
-        result_state = await self.agents["safe_risk_analyst"].process(state, self.progress_manager)
-
-        if self.progress_manager:
-            if isinstance(result_state, dict):
-                risk_report = result_state.get('risk_debate_state', {}).get('current_safe_response', '')
-            else:
-                risk_report = result_state.risk_debate_state.current_safe_response
-            self.progress_manager.complete_agent("safe_risk_analyst", risk_report, success=bool(risk_report))
-
-        return result_state
-    
     async def _neutral_risk_analyst_node(self, state: AgentState) -> AgentState:
-        """中性风险分析师节点"""
-        # 获取当前风险辩论轮次
-        if isinstance(state, dict):
-            risk_debate_state = state.get('risk_debate_state', {})
-        else:
-            risk_debate_state = state.risk_debate_state
-        current_round = risk_debate_state.get('count', 0) + 1
-        
-        print(f"⚖️ 中性风险分析师第{current_round}轮")
-        if self.progress_manager:
-            self.progress_manager.start_agent("neutral_risk_analyst", f"进行中性风险分析第{current_round}轮")
+        """中立风险分析师节点"""
+        print("⚖️ 中立风险分析师")
+        result = await self.agents["neutral_risk_analyst"].process(state, self.progress_manager)
+        return result
 
-        result_state = await self.agents["neutral_risk_analyst"].process(state, self.progress_manager)
-
-        if self.progress_manager:
-            if isinstance(result_state, dict):
-                risk_report = result_state.get('risk_debate_state', {}).get('current_neutral_response', '')
-            else:
-                risk_report = result_state.risk_debate_state.current_neutral_response
-            self.progress_manager.complete_agent("neutral_risk_analyst", risk_report, success=bool(risk_report))
-
-        return result_state
-    
     async def _risk_manager_node(self, state: AgentState) -> AgentState:
-        """风险经理节点"""
-        print("🎯 第5阶段：风险管理经理")
-        if self.progress_manager:
-            self.progress_manager.start_agent("risk_manager", "最终风险评估和交易决策")
+        """风险管理器节点"""
+        print("🛡️ 风险管理器")
+        result = await self.agents["risk_manager"].process(state, self.progress_manager)
+        return result
 
-        result_state = await self.agents["risk_manager"].process(state, self.progress_manager)
-
-        if self.progress_manager:
-            if isinstance(result_state, dict):
-                final_decision = result_state.get('final_trade_decision', '')
-            else:
-                final_decision = result_state.final_trade_decision
-            self.progress_manager.complete_agent("risk_manager", final_decision, success=bool(final_decision))
-
-        print("🏁 所有阶段完成")
-        return result_state
-    
     # 条件判断函数
     def _should_continue_investment_debate(self, state) -> str:
         """判断是否继续投资辩论"""
