@@ -256,8 +256,19 @@ class WorkflowOrchestrator:
         current_round = debate_state.get('count', 0) + 1
         
         print(f"🐂 第2阶段：看涨研究员第{current_round}轮")
-        result = await self.agents["bull_researcher"].process(state, self.progress_manager)
-        return result
+        if self.progress_manager:
+            self.progress_manager.start_agent("bull_researcher", f"构建看涨论证第{current_round}轮")
+
+        result_state = await self.agents["bull_researcher"].process(state, self.progress_manager)
+
+        if self.progress_manager:
+            if isinstance(result_state, dict):
+                bull_report = result_state.get('investment_debate_state', {}).get('current_response', '')
+            else:
+                bull_report = result_state.investment_debate_state.current_response
+            self.progress_manager.complete_agent("bull_researcher", bull_report, success=bool(bull_report))
+
+        return result_state
     
     async def _bear_researcher_node(self, state: AgentState) -> AgentState:
         """看跌研究员节点"""
@@ -269,20 +280,53 @@ class WorkflowOrchestrator:
         current_round = debate_state.get('count', 0) + 1
         
         print(f"🐻 看跌研究员第{current_round}轮")
-        result = await self.agents["bear_researcher"].process(state, self.progress_manager)
-        return result
+        if self.progress_manager:
+            self.progress_manager.start_agent("bear_researcher", f"构建看跌论证第{current_round}轮")
+
+        result_state = await self.agents["bear_researcher"].process(state, self.progress_manager)
+
+        if self.progress_manager:
+            if isinstance(result_state, dict):
+                bear_report = result_state.get('investment_debate_state', {}).get('current_response', '')
+            else:
+                bear_report = result_state.investment_debate_state.current_response
+            self.progress_manager.complete_agent("bear_researcher", bear_report, success=bool(bear_report))
+
+        return result_state
 
     async def _research_manager_node(self, state: AgentState) -> AgentState:
         """研究经理节点"""
         print("👔 第3阶段：研究经理")
-        result = await self.agents["research_manager"].process(state, self.progress_manager)
-        return result
+        if self.progress_manager:
+            self.progress_manager.start_agent("research_manager", "评估辩论并做出投资决策")
+
+        result_state = await self.agents["research_manager"].process(state, self.progress_manager)
+
+        if self.progress_manager:
+            if isinstance(result_state, dict):
+                investment_plan = result_state.get('investment_plan', '')
+            else:
+                investment_plan = result_state.investment_plan
+            self.progress_manager.complete_agent("research_manager", investment_plan, success=bool(investment_plan))
+
+        return result_state
 
     async def _trader_node(self, state: AgentState) -> AgentState:
         """交易员节点"""
         print("💼 交易员")
-        result = await self.agents["trader"].process(state, self.progress_manager)
-        return result
+        if self.progress_manager:
+            self.progress_manager.start_agent("trader", "制定具体交易计划")
+
+        result_state = await self.agents["trader"].process(state, self.progress_manager)
+
+        if self.progress_manager:
+            if isinstance(result_state, dict):
+                trade_plan = result_state.get('trader_investment_plan', '')
+            else:
+                trade_plan = result_state.trader_investment_plan
+            self.progress_manager.complete_agent("trader", trade_plan, success=bool(trade_plan))
+
+        return result_state
     
     async def _aggressive_risk_analyst_node(self, state: AgentState) -> AgentState:
         """激进风险分析师节点"""
@@ -294,8 +338,19 @@ class WorkflowOrchestrator:
         current_round = risk_debate_state.get('count', 0) + 1
         
         print(f"🚀 第4阶段：激进风险分析师第{current_round}轮")
-        result = await self.agents["aggressive_risk_analyst"].process(state, self.progress_manager)
-        return result
+        if self.progress_manager:
+            self.progress_manager.start_agent("aggressive_risk_analyst", f"进行激进风险分析第{current_round}轮")
+
+        result_state = await self.agents["aggressive_risk_analyst"].process(state, self.progress_manager)
+
+        if self.progress_manager:
+            if isinstance(result_state, dict):
+                risk_report = result_state.get('risk_debate_state', {}).get('current_aggressive_response', '')
+            else:
+                risk_report = result_state.risk_debate_state.current_aggressive_response
+            self.progress_manager.complete_agent("aggressive_risk_analyst", risk_report, success=bool(risk_report))
+
+        return result_state
     
     async def _safe_risk_analyst_node(self, state: AgentState) -> AgentState:
         """保守风险分析师节点"""
@@ -307,8 +362,19 @@ class WorkflowOrchestrator:
         current_round = risk_debate_state.get('count', 0) + 1
         
         print(f"🛡️ 保守风险分析师第{current_round}轮")
-        result = await self.agents["safe_risk_analyst"].process(state, self.progress_manager)
-        return result
+        if self.progress_manager:
+            self.progress_manager.start_agent("safe_risk_analyst", f"进行保守风险分析第{current_round}轮")
+
+        result_state = await self.agents["safe_risk_analyst"].process(state, self.progress_manager)
+
+        if self.progress_manager:
+            if isinstance(result_state, dict):
+                risk_report = result_state.get('risk_debate_state', {}).get('current_safe_response', '')
+            else:
+                risk_report = result_state.risk_debate_state.current_safe_response
+            self.progress_manager.complete_agent("safe_risk_analyst", risk_report, success=bool(risk_report))
+
+        return result_state
     
     async def _neutral_risk_analyst_node(self, state: AgentState) -> AgentState:
         """中性风险分析师节点"""
@@ -320,15 +386,37 @@ class WorkflowOrchestrator:
         current_round = risk_debate_state.get('count', 0) + 1
         
         print(f"⚖️ 中性风险分析师第{current_round}轮")
-        result = await self.agents["neutral_risk_analyst"].process(state, self.progress_manager)
-        return result
+        if self.progress_manager:
+            self.progress_manager.start_agent("neutral_risk_analyst", f"进行中性风险分析第{current_round}轮")
+
+        result_state = await self.agents["neutral_risk_analyst"].process(state, self.progress_manager)
+
+        if self.progress_manager:
+            if isinstance(result_state, dict):
+                risk_report = result_state.get('risk_debate_state', {}).get('current_neutral_response', '')
+            else:
+                risk_report = result_state.risk_debate_state.current_neutral_response
+            self.progress_manager.complete_agent("neutral_risk_analyst", risk_report, success=bool(risk_report))
+
+        return result_state
     
     async def _risk_manager_node(self, state: AgentState) -> AgentState:
         """风险经理节点"""
         print("🎯 第5阶段：风险管理经理")
-        result = await self.agents["risk_manager"].process(state, self.progress_manager)
+        if self.progress_manager:
+            self.progress_manager.start_agent("risk_manager", "最终风险评估和交易决策")
+
+        result_state = await self.agents["risk_manager"].process(state, self.progress_manager)
+
+        if self.progress_manager:
+            if isinstance(result_state, dict):
+                final_decision = result_state.get('final_trade_decision', '')
+            else:
+                final_decision = result_state.final_trade_decision
+            self.progress_manager.complete_agent("risk_manager", final_decision, success=bool(final_decision))
+
         print("🏁 所有阶段完成")
-        return result
+        return result_state
     
     # 条件判断函数
     def _should_continue_investment_debate(self, state) -> str:
@@ -416,6 +504,7 @@ class WorkflowOrchestrator:
                     sentiment_report=workflow_result.get('sentiment_report', ''),
                     news_report=workflow_result.get('news_report', ''),
                     fundamentals_report=workflow_result.get('fundamentals_report', ''),
+                    shareholder_report=workflow_result.get('shareholder_report', ''),  # 添加这一行
                     investment_plan=workflow_result.get('investment_plan', ''),
                     trader_investment_plan=workflow_result.get('trader_investment_plan', ''),
                     final_trade_decision=workflow_result.get('final_trade_decision', ''),

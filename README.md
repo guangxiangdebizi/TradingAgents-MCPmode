@@ -372,18 +372,46 @@ python -m src.dumptools.export_tool --format pdf --file src/dump/session_2025073
 
 **推荐方法（Windows兼容）**：
 ```bash
-# Markdown转换器
-python src/dumptools/json_to_markdown.py --latest
-python src/dumptools/json_to_markdown.py --all
-python src/dumptools/json_to_markdown.py --list
+# 进入dumptools目录
+cd src/dumptools
 
-# PDF转换器
-python src/dumptools/json_to_pdf.py --latest
-python src/dumptools/json_to_pdf.py --all
+# Markdown转换器
+python json_to_markdown.py -d "../dump" --latest
+python json_to_markdown.py -d "../dump" --all
+python json_to_markdown.py -d "../dump" --list
+
+# PDF转换器（已重构，直接从JSON生成PDF）
+python json_to_pdf.py -d "../dump" --latest
+python json_to_pdf.py -d "../dump" --all
 
 # DOCX转换器
-python src/dumptools/json_to_docx.py --latest
-python src/dumptools/json_to_docx.py --all
+python json_to_docx.py -d "../dump" --latest
+python json_to_docx.py -d "../dump" --all
+
+# 通过Markdown中间步骤转换（推荐，内容完整性更好）
+python md2pdf.py -l -d "../dump"   # JSON→Markdown→PDF
+python md2pdf.py -a -d "../dump"   # 批量转换所有文件
+
+python md2docx.py -l -d "../dump"  # JSON→Markdown→DOCX
+python md2docx.py -a -d "../dump"  # 批量转换所有文件
+
+# md2pdf.py支持的Markdown元素：
+# - 标题（# ## ###）
+# - 粗体文本（**文本**）
+# - 引用（> 文本）
+# - 列表（- 项目）
+# - 代码块（```代码```）
+# - 表格（|列1|列2|）
+# - Emoji表情符号
+
+# md2docx.py支持的Markdown元素：
+# - 标题（# ## ###）
+# - 粗体文本（**文本**）
+# - 引用（> 文本）
+# - 列表（- 项目）
+# - 代码块（```代码```）
+# - 表格（|列1|列2|）
+# - Emoji表情符号（原生支持）
 ```
 
 **备选方法（需要完整依赖）**：
@@ -415,28 +443,54 @@ TradingAgents-MCPmode/
 
 ### 🔄 导出流程架构
 
-系统采用一致性的两步导出流程，确保所有格式的报告具有相同的内容结构和格式标准：
+系统采用灵活的导出架构，针对不同格式优化生成流程：
 
+#### Markdown导出
 ```
-JSON数据 → Markdown格式 → 目标格式(PDF/DOCX)
+JSON数据 → Markdown格式
+```
+
+#### PDF导出（两种方式）
+```
+方式1: JSON数据 → PDF格式（直接生成）
+方式2: JSON数据 → Markdown → PDF（两步转换，推荐）
+```
+
+#### DOCX导出（两种方式）
+```
+方式1: JSON数据 → DOCX格式（直接生成）
+方式2: JSON数据 → Markdown → DOCX（两步转换，推荐）
 ```
 
 #### 流程说明
-1. **第一步**：JSON转Markdown
-   - 统一的数据解析和格式化
-   - 标准化的内容结构
-   - 一致的表情符号和特殊字符处理
+1. **Markdown转换**：解析JSON数据结构，生成结构化Markdown文档
+2. **PDF转换**：
+   - 直接方式：使用ReportLab库从JSON直接生成PDF，支持智能中文字体注册
+   - 两步方式：先转为Markdown，再使用md2pdf.py转换，内容完整性更好
+3. **DOCX转换**：
+   - 直接方式：使用python-docx库从JSON直接生成DOCX文档
+   - 两步方式：先转为Markdown，再使用md2docx.py转换，内容完整性更好
 
-2. **第二步**：Markdown转目标格式
-   - **PDF转换**：使用WeasyPrint（首选）或ReportLab（备选）
-   - **DOCX转换**：使用python-docx库
-   - 保持与Markdown相同的视觉格式
+#### 转换方式对比
+
+**直接转换方式**：
+- ✅ 性能更快，减少转换步骤
+- ✅ 格式专门优化
+- ❌ 可能存在内容截断问题
+
+**两步转换方式（推荐）**：
+- ✅ 内容完整性最佳，不会截断长内容
+- ✅ 基于成熟的Markdown格式，稳定性更好
+- ✅ 支持完整的分析报告内容
+- ❌ 转换步骤稍多
 
 #### 优势
-- **一致性**：所有格式报告内容结构完全一致
-- **可维护性**：只需维护一套Markdown生成逻辑
-- **扩展性**：添加新格式只需实现Markdown转换器
-- **质量保证**：统一的内容验证和格式化标准
+- **多种选择**：提供直接转换和两步转换两种方式
+- **内容完整**：两步转换确保所有分析内容都被保留
+- **格式优化**：每种格式都有专门优化的样式和布局
+- **稳定性**：减少依赖链，提高转换成功率
+- **扩展性**：添加新格式只需实现对应的直接转换器
+- **质量保证**：每种格式都有独立的内容验证和格式化标准
 
 ### 🎨 报告样式特性
 
@@ -508,17 +562,20 @@ pip install -r requirements.txt
 # 核心导出依赖（必需）
 pip install markdown2 python-docx reportlab
 
-# PDF生成首选依赖（可选，Windows可能需要额外配置）
-pip install weasyprint
-
-# 如果WeasyPrint安装失败，可以跳过，系统会自动使用reportlab备选方案
+# 可选依赖（如果需要使用统一导出工具）
+pip install weasyprint  # 可选，仅统一导出工具需要
 ```
 
 **依赖说明**：
 - **markdown2**: Markdown格式生成（核心依赖）
-- **python-docx**: DOCX格式生成
-- **reportlab**: PDF生成备选方案，兼容性好
-- **weasyprint**: PDF生成首选方案，支持CSS样式，但Windows下可能需要额外配置
+- **python-docx**: DOCX格式生成（核心依赖）
+- **reportlab**: PDF格式生成（核心依赖，已重构为直接生成）
+- **weasyprint**: 仅统一导出工具需要，单独使用PDF转换器不需要
+
+**重要更新**：
+- ✅ **PDF转换器已重构**：`json_to_pdf.py`现在直接从JSON生成PDF，不再依赖markdown2或weasyprint
+- ✅ **更好的兼容性**：PDF转换器使用reportlab，在Windows系统上更稳定
+- ✅ **智能字体支持**：自动注册中文字体，支持表情符号显示
 
 </details>
 
@@ -532,40 +589,45 @@ pip install weasyprint
 ### 🔧 故障排除
 
 <details>
-<summary><strong>⚠️ Windows系统WeasyPrint错误</strong></summary>
+<summary><strong>⚠️ 导出工具常见问题</strong></summary>
 
-**问题现象**：
+**问题1：PDF转换器运行正常**
+
+✅ **好消息**：`json_to_pdf.py`已重构，不再依赖WeasyPrint，使用更稳定的ReportLab库。
+
+```bash
+# 直接使用PDF转换器（推荐）
+cd src/dumptools
+python json_to_pdf.py -d "../dump" --latest
+```
+
+**问题2：统一导出工具WeasyPrint错误**
+
+如果使用统一导出工具遇到WeasyPrint错误：
 ```
 WeasyPrint could not import some external libraries
 OSError: dlopen() failed to load a library: libgobject-2.0-0
 ```
 
-**原因**：WeasyPrint在Windows上需要GTK+库，但系统未安装。
-
 **解决方案**：
 
-1. **推荐方案**：使用直接脚本执行（绕过依赖问题）
+1. **推荐方案**：直接使用单独的转换器
    ```bash
-   # 直接运行脚本，避免包导入问题
-   python src/dumptools/json_to_pdf.py --latest
-   python src/dumptools/json_to_docx.py --latest
-   python src/dumptools/export_tool.py --format pdf --latest
+   # 进入dumptools目录
+   cd src/dumptools
+   
+   # 使用重构后的PDF转换器（无WeasyPrint依赖）
+   python json_to_pdf.py -d "../dump" --latest
+   python json_to_docx.py -d "../dump" --latest
    ```
 
-2. **备选方案**：安装WeasyPrint完整依赖
+2. **备选方案**：修复WeasyPrint（仅统一工具需要）
    ```bash
-   # 方法1：使用conda（推荐）
+   # 方法1：使用conda
    conda install -c conda-forge weasyprint
    
-   # 方法2：使用pip + GTK手动安装
-   # 需要先安装GTK+库，参考官方文档
-   pip install weasyprint
-   ```
-
-3. **最简方案**：仅使用ReportLab（PDF质量略低）
-   ```bash
-   pip uninstall weasyprint  # 移除有问题的WeasyPrint
-   pip install reportlab     # 确保安装ReportLab
+   # 方法2：移除WeasyPrint，统一工具会自动降级
+   pip uninstall weasyprint
    ```
 
 </details>
@@ -574,11 +636,18 @@ OSError: dlopen() failed to load a library: libgobject-2.0-0
 <summary><strong>🔍 依赖检查工具</strong></summary>
 
 ```bash
-# 检查已安装的导出相关依赖
-python -c "import markdown2; print('✅ markdown2')"
-python -c "import docx; print('✅ python-docx')"
-python -c "import reportlab; print('✅ reportlab')"
-python -c "import weasyprint; print('✅ weasyprint')"  # 可能失败
+# 检查核心导出依赖（必需）
+python -c "import markdown2; print('✅ markdown2 - Markdown转换器需要')"
+python -c "import docx; print('✅ python-docx - DOCX转换器需要')"
+python -c "import reportlab; print('✅ reportlab - PDF转换器需要')"
+
+# 检查可选依赖（仅统一导出工具需要）
+python -c "try: import weasyprint; print('✅ weasyprint - 统一导出工具可用'); except: print('⚠️ weasyprint - 统一导出工具不可用，但单独转换器仍可正常工作')"
+
+# 快速测试转换器
+cd src/dumptools
+python json_to_pdf.py --help
+python json_to_docx.py --help
 ```
 
 </details>

@@ -66,12 +66,14 @@ class BaseAgent(ABC):
             sentiment_report = state.get('sentiment_report', '')
             news_report = state.get('news_report', '')
             fundamentals_report = state.get('fundamentals_report', '')
+            shareholder_report = state.get('shareholder_report', '')  # 添加这一行
             
             reports = {
                 "market_report": market_report,
                 "sentiment_report": sentiment_report,
                 "news_report": news_report,
-                "fundamentals_report": fundamentals_report
+                "fundamentals_report": fundamentals_report,
+                "shareholder_report": shareholder_report  # 添加这一行
             }
             
             # 获取辩论历史
@@ -240,12 +242,8 @@ class BaseAgent(ABC):
             # 记录执行完成
             if progress_tracker:
                 if hasattr(progress_tracker, 'complete_agent'):
-                    # 新的ProgressManager接口
-                    progress_tracker.complete_agent(self.agent_name, True, {
-                        "result": result,
-                        "result_length": len(result),
-                        "mcp_used": self.mcp_enabled and self.available_tools
-                    })
+                    # 修复：传递完整的result内容而不是True
+                    progress_tracker.complete_agent(self.agent_name, result, True)
                 elif hasattr(progress_tracker, 'log_agent_complete'):
                     # 旧的ProgressTracker接口（兼容性）
                     progress_tracker.log_agent_complete(self.agent_name, result, {
@@ -263,9 +261,8 @@ class BaseAgent(ABC):
             # 记录执行失败
             if progress_tracker:
                 if hasattr(progress_tracker, 'complete_agent'):
-                    # 新的ProgressManager接口
-                    progress_tracker.complete_agent(self.agent_name, False)
-                    progress_tracker.add_error(self.agent_name, error_msg)
+                    # 修复：传递错误信息而不是False
+                    progress_tracker.complete_agent(self.agent_name, error_msg, False)
                 elif hasattr(progress_tracker, 'log_agent_complete'):
                     # 旧的ProgressTracker接口（兼容性）
                     progress_tracker.log_agent_complete(self.agent_name, error_msg, {
