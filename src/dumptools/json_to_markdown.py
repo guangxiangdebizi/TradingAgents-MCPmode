@@ -84,32 +84,36 @@ class JSONToMarkdownConverter:
             md_lines.append(f"> {data['user_query']}")
             md_lines.append("")
         
-        # 智能体执行情况
+        # 智能体执行情况 - 只导出已完成的智能体
         if 'agents' in data and data['agents']:
-            md_lines.append("## 🤖 智能体执行情况")
-            md_lines.append("")
+            # 过滤出status为completed的智能体
+            completed_agents = [agent for agent in data['agents'] if agent.get('status') == 'completed']
             
-            for agent in data['agents']:
-                agent_name = agent.get('agent_name', 'Unknown Agent')
-                md_lines.append(f"### {agent_name}")
+            if completed_agents:
+                md_lines.append("## 🤖 智能体执行情况（已完成）")
                 md_lines.append("")
                 
-                # 基本信息
-                md_lines.append(f"- **状态**: {agent.get('status', 'N/A')}")
-                md_lines.append(f"- **开始时间**: {agent.get('start_time', 'N/A')}")
-                if agent.get('end_time'):
-                    md_lines.append(f"- **结束时间**: {agent.get('end_time')}")
-                md_lines.append(f"- **执行结果**: {agent.get('result', 'N/A')}")
-                md_lines.append("")
-                
-                # 执行内容
-                if agent.get('action'):
-                    md_lines.append("**执行内容**:")
+                for agent in completed_agents:
+                    agent_name = agent.get('agent_name', 'Unknown Agent')
+                    md_lines.append(f"### {agent_name}")
                     md_lines.append("")
-                    md_lines.append("```")
-                    md_lines.append(str(agent['action']))
-                    md_lines.append("```")
+                    
+                    # 基本信息
+                    md_lines.append(f"- **状态**: {agent.get('status', 'N/A')}")
+                    md_lines.append(f"- **开始时间**: {agent.get('start_time', 'N/A')}")
+                    if agent.get('end_time'):
+                        md_lines.append(f"- **结束时间**: {agent.get('end_time')}")
+                    md_lines.append(f"- **执行结果**: {agent.get('result', 'N/A')}")
                     md_lines.append("")
+                    
+                    # 执行内容
+                    if agent.get('action'):
+                        md_lines.append("**执行内容**:")
+                        md_lines.append("")
+                        md_lines.append("```")
+                        md_lines.append(str(agent['action']))
+                        md_lines.append("```")
+                        md_lines.append("")
         
         # 阶段信息
         if 'stages' in data and data['stages']:
