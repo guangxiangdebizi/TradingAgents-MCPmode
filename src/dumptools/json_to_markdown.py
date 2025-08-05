@@ -59,6 +59,28 @@ class JSONToMarkdownConverter:
             print(f"❌ 转换失败: {e}")
             return None
     
+    def _normalize_result_headers(self, result_text: str) -> str:
+        """标准化result中的标题格式，让所有标题都比agent标题低一级"""
+        if not result_text:
+            return result_text
+        
+        lines = result_text.split('\n')
+        normalized_lines = []
+        
+        for line in lines:
+            # 检查是否是markdown标题行
+            if line.strip().startswith('#'):
+                # 移除开头的#号，然后添加####（四级标题，比agent的###低一级）
+                title_text = line.strip().lstrip('#').strip()
+                if title_text:  # 确保不是空标题
+                    normalized_lines.append(f"#### {title_text}")
+                else:
+                    normalized_lines.append(line)  # 保持原样如果是空标题
+            else:
+                normalized_lines.append(line)
+        
+        return '\n'.join(normalized_lines)
+    
     def _generate_markdown(self, data: Dict[str, Any]) -> str:
         """生成Markdown内容"""
         md_lines = []
@@ -84,35 +106,39 @@ class JSONToMarkdownConverter:
             md_lines.append(f"> {data['user_query']}")
             md_lines.append("")
         
-        # 智能体执行情况 - 只导出已完成的智能体
+        # 智能体分析结果 - 只导出已完成的智能体的结果
         if 'agents' in data and data['agents']:
             # 过滤出status为completed的智能体
             completed_agents = [agent for agent in data['agents'] if agent.get('status') == 'completed']
             
             if completed_agents:
-                md_lines.append("## 🤖 智能体执行情况（已完成）")
+                md_lines.append("## 📊 分析结果")
                 md_lines.append("")
                 
                 for agent in completed_agents:
                     agent_name = agent.get('agent_name', 'Unknown Agent')
-                    md_lines.append(f"### {agent_name}")
+                    
+                    # 根据智能体类型设置更好的标题
+                    title_mapping = {
+                        'market_analyst': '📈 市场技术分析',
+                        'sentiment_analyst': '💭 市场情绪分析', 
+                        'news_analyst': '📰 新闻信息分析',
+                        'fundamentals_analyst': '📋 基本面分析',
+                        'shareholder_analyst': '👥 股东结构分析',
+                        'bull_researcher': '🐂 看涨观点',
+                        'bear_researcher': '🐻 看跌观点'
+                    }
+                    
+                    section_title = title_mapping.get(agent_name, f"📊 {agent_name}")
+                    md_lines.append(f"### {section_title}")
                     md_lines.append("")
                     
-                    # 基本信息
-                    md_lines.append(f"- **状态**: {agent.get('status', 'N/A')}")
-                    md_lines.append(f"- **开始时间**: {agent.get('start_time', 'N/A')}")
-                    if agent.get('end_time'):
-                        md_lines.append(f"- **结束时间**: {agent.get('end_time')}")
-                    md_lines.append(f"- **执行结果**: {agent.get('result', 'N/A')}")
-                    md_lines.append("")
-                    
-                    # 执行内容
-                    if agent.get('action'):
-                        md_lines.append("**执行内容**:")
+                    # 处理并导出分析结果，标准化标题格式
+                    if agent.get('result'):
+                        normalized_result = self._normalize_result_headers(agent['result'])
+                        md_lines.append(normalized_result)
                         md_lines.append("")
-                        md_lines.append("```")
-                        md_lines.append(str(agent['action']))
-                        md_lines.append("```")
+                        md_lines.append("---")
                         md_lines.append("")
         
         # 阶段信息

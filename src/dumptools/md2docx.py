@@ -37,118 +37,153 @@ class MarkdownToDocxConverter:
             dump_dir: dump文件夹路径
         """
         self.dump_dir = Path(dump_dir)
-        self.markdown_dir = Path("markdown_reports")
-        self.output_dir = Path("docx_reports")
-        
-        # 确保输出目录存在
+        # 保持原有的输出目录设置
+        self.output_dir = self.dump_dir.parent / "output"
         self.output_dir.mkdir(exist_ok=True)
         
-        # 初始化markdown转换器
-        self.md_converter = JSONToMarkdownConverter(dump_dir)
+        # 初始化Markdown转换器
+        from json_to_markdown import JSONToMarkdownConverter
+        self.md_converter = JSONToMarkdownConverter(str(self.dump_dir))
+        
+        # 目录项列表
+        self.toc_entries = []
     
     def _setup_document_styles(self, doc):
         """设置文档样式"""
-        try:
-            # 获取样式集合
-            styles = doc.styles
-            
-            # 设置默认字体
-            style = styles['Normal']
-            font = style.font
-            font.name = '微软雅黑'
-            font.size = Pt(10)
-            
-            # 创建标题样式
-            if 'Chinese Title' not in [s.name for s in styles]:
-                title_style = styles.add_style('Chinese Title', WD_STYLE_TYPE.PARAGRAPH)
-                title_font = title_style.font
-                title_font.name = '微软雅黑'
-                title_font.size = Pt(18)
-                title_font.bold = True
-                title_font.color.rgb = RGBColor(0, 0, 0)
-                title_style.paragraph_format.alignment = WD_ALIGN_PARAGRAPH.CENTER
-                title_style.paragraph_format.space_after = Pt(12)
-            
-            # 创建一级标题样式
-            if 'Chinese Heading 1' not in [s.name for s in styles]:
-                h1_style = styles.add_style('Chinese Heading 1', WD_STYLE_TYPE.PARAGRAPH)
-                h1_font = h1_style.font
-                h1_font.name = '微软雅黑'
-                h1_font.size = Pt(14)
-                h1_font.bold = True
-                h1_font.color.rgb = RGBColor(0, 0, 0)
-                h1_style.paragraph_format.space_before = Pt(12)
-                h1_style.paragraph_format.space_after = Pt(6)
-            
-            # 创建二级标题样式
-            if 'Chinese Heading 2' not in [s.name for s in styles]:
-                h2_style = styles.add_style('Chinese Heading 2', WD_STYLE_TYPE.PARAGRAPH)
-                h2_font = h2_style.font
-                h2_font.name = '微软雅黑'
-                h2_font.size = Pt(12)
-                h2_font.bold = True
-                h2_font.color.rgb = RGBColor(0, 0, 0)
-                h2_style.paragraph_format.space_before = Pt(8)
-                h2_style.paragraph_format.space_after = Pt(4)
-            
-            # 创建代码样式
-            if 'Chinese Code' not in [s.name for s in styles]:
-                code_style = styles.add_style('Chinese Code', WD_STYLE_TYPE.PARAGRAPH)
-                code_font = code_style.font
-                code_font.name = 'Consolas'
-                code_font.size = Pt(9)
-                code_font.color.rgb = RGBColor(0, 0, 0)
-                code_style.paragraph_format.left_indent = Inches(0.5)
-                code_style.paragraph_format.space_before = Pt(6)
-                code_style.paragraph_format.space_after = Pt(6)
-            
-            # 创建引用样式
-            if 'Chinese Quote' not in [s.name for s in styles]:
-                quote_style = styles.add_style('Chinese Quote', WD_STYLE_TYPE.PARAGRAPH)
-                quote_font = quote_style.font
-                quote_font.name = '微软雅黑'
-                quote_font.size = Pt(10)
-                quote_font.italic = True
-                quote_font.color.rgb = RGBColor(100, 100, 100)
-                quote_style.paragraph_format.left_indent = Inches(0.5)
-                quote_style.paragraph_format.space_after = Pt(6)
-            
-        except Exception as e:
-            print(f"⚠️ 样式设置失败: {e}")
+        # 设置默认字体
+        style = doc.styles['Normal']
+        font = style.font
+        font.name = '微软雅黑'
+        font.size = Pt(10)
+        
+        # 创建中文标题样式
+        if 'Chinese Title' not in [s.name for s in doc.styles]:
+            title_style = doc.styles.add_style('Chinese Title', WD_STYLE_TYPE.PARAGRAPH)
+            title_font = title_style.font
+            title_font.name = '微软雅黑'
+            title_font.size = Pt(18)
+            title_font.bold = True
+            title_style.paragraph_format.alignment = WD_ALIGN_PARAGRAPH.CENTER
+            title_style.paragraph_format.space_after = Pt(20)
+        
+        # 创建各级标题样式
+        heading_configs = [
+            ('Chinese Heading 1', 16, True),
+            ('Chinese Heading 2', 14, True),
+            ('Chinese Heading 3', 12, True),
+            ('Chinese Heading 4', 11, True)
+        ]
+        
+        for style_name, font_size, is_bold in heading_configs:
+            if style_name not in [s.name for s in doc.styles]:
+                heading_style = doc.styles.add_style(style_name, WD_STYLE_TYPE.PARAGRAPH)
+                heading_font = heading_style.font
+                heading_font.name = '微软雅黑'
+                heading_font.size = Pt(font_size)
+                heading_font.bold = is_bold
+                heading_style.paragraph_format.space_after = Pt(10)
+                heading_style.paragraph_format.space_before = Pt(10)
+        
+        # 创建代码样式
+        if 'Chinese Code' not in [s.name for s in doc.styles]:
+            code_style = doc.styles.add_style('Chinese Code', WD_STYLE_TYPE.PARAGRAPH)
+            code_font = code_style.font
+            code_font.name = 'Consolas'
+            code_font.size = Pt(9)
+            code_style.paragraph_format.left_indent = Inches(0.5)
+        
+        # 创建引用样式
+        if 'Chinese Quote' not in [s.name for s in doc.styles]:
+            quote_style = doc.styles.add_style('Chinese Quote', WD_STYLE_TYPE.PARAGRAPH)
+            quote_font = quote_style.font
+            quote_font.name = '微软雅黑'
+            quote_font.size = Pt(10)
+            quote_font.italic = True
+            quote_style.paragraph_format.left_indent = Inches(0.5)
+            quote_style.paragraph_format.right_indent = Inches(0.5)
+        
+        # 创建目录样式
+        if 'TOC Heading' not in [s.name for s in doc.styles]:
+            toc_heading_style = doc.styles.add_style('TOC Heading', WD_STYLE_TYPE.PARAGRAPH)
+            toc_heading_font = toc_heading_style.font
+            toc_heading_font.name = '微软雅黑'
+            toc_heading_font.size = Pt(16)
+            toc_heading_font.bold = True
+            toc_heading_style.paragraph_format.alignment = WD_ALIGN_PARAGRAPH.CENTER
+            toc_heading_style.paragraph_format.space_after = Pt(20)
     
     def _add_emoji_support(self, doc):
-        """添加表情符号支持"""
+        """添加emoji字体支持"""
         try:
-            # 设置文档支持表情符号字体
-            element = doc.element
-            element.set(qn('w:embedTrueTypeFonts'), '1')
+            # 为文档添加Segoe UI Emoji字体支持
+            # 这需要在运行时设置字体回退
+            pass
         except Exception as e:
-            print(f"⚠️ 表情符号支持设置失败: {e}")
+            print(f"⚠️ Emoji字体设置失败: {e}")
+    
+    def _create_table_of_contents(self, doc):
+        """创建目录"""
+        if not self.toc_entries:
+            return
+        
+        # 添加目录标题
+        toc_heading = doc.add_paragraph('📋 目录', style='TOC Heading')
+        
+        # 添加目录项
+        for level, title, page_num in self.toc_entries:
+            toc_paragraph = doc.add_paragraph()
+            
+            # 设置缩进
+            toc_paragraph.paragraph_format.left_indent = Inches((level - 1) * 0.3)
+            
+            # 添加标题文本
+            run = toc_paragraph.add_run(title)
+            run.font.name = '微软雅黑'
+            
+            # 尝试设置emoji字体
+            if any(ord(char) > 127 for char in title if ord(char) > 0x1F000):
+                run.font.name = 'Segoe UI Emoji'
+            
+            # 添加点线和页码（简化版）
+            dots_run = toc_paragraph.add_run(' ' + '.' * (50 - len(title)))
+            dots_run.font.name = '微软雅黑'
+            
+            page_run = toc_paragraph.add_run(f' {page_num}')
+            page_run.font.name = '微软雅黑'
+        
+        # 添加分页符
+        doc.add_page_break()
     
     def _parse_markdown_to_docx(self, markdown_content: str, doc):
         """解析Markdown内容并添加到DOCX文档"""
         lines = markdown_content.split('\n')
-        
         i = 0
+        
         while i < len(lines):
             line = lines[i].strip()
             
             if not line:
-                # 添加空行
-                doc.add_paragraph()
                 i += 1
                 continue
             
             # 处理标题
-            if line.startswith('# '):
-                title = line[2:].strip()
-                p = doc.add_paragraph(title, style='Chinese Title')
-            elif line.startswith('## '):
-                heading = line[3:].strip()
-                p = doc.add_paragraph(heading, style='Chinese Heading 1')
-            elif line.startswith('### '):
-                heading = line[4:].strip()
-                p = doc.add_paragraph(heading, style='Chinese Heading 2')
+            if line.startswith('#'):
+                level = len(line) - len(line.lstrip('#'))
+                heading = line.lstrip('#').strip()
+                
+                if level == 1:
+                    p = doc.add_paragraph(heading, style='Chinese Heading 1')
+                elif level == 2:
+                    p = doc.add_paragraph(heading, style='Chinese Heading 2')
+                elif level == 3:
+                    p = doc.add_paragraph(heading, style='Chinese Heading 3')
+                else:
+                    p = doc.add_paragraph(heading, style='Chinese Heading 4')
+                
+                # 为emoji设置特殊字体
+                for run in p.runs:
+                    if any(ord(char) > 0x1F000 for char in run.text):
+                        run.font.name = 'Segoe UI Emoji'
             
             # 处理引用
             elif line.startswith('> '):
@@ -222,8 +257,6 @@ class MarkdownToDocxConverter:
                         run.font.size = Pt(10)
             
             i += 1
-        
-        return doc
     
     def _add_table_to_doc(self, table_rows, doc):
         """将表格添加到Word文档"""

@@ -19,14 +19,26 @@ try:
     from reportlab.lib.pagesizes import A4
     from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
     from reportlab.lib.units import inch
-    from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, PageBreak, Table, TableStyle
+    from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
+    from reportlab.lib import colors
     from reportlab.lib.enums import TA_LEFT, TA_CENTER, TA_JUSTIFY
     from reportlab.pdfbase import pdfmetrics
     from reportlab.pdfbase.ttfonts import TTFont
-    from reportlab.lib.colors import black, blue, red, grey
 except ImportError:
     print("❌ 缺少依赖包，请安装：pip install reportlab")
     sys.exit(1)
+
+import os
+import sys
+from pathlib import Path
+from typing import Optional, List, Tuple
+import argparse
+from datetime import datetime
+import re
+import html
+
+# 导入自定义模块
+from json_to_markdown import JSONToMarkdownConverter
 
 
 class MarkdownToPDFConverter:
@@ -39,22 +51,21 @@ class MarkdownToPDFConverter:
             dump_dir: dump文件夹路径
         """
         self.dump_dir = Path(dump_dir)
-        self.markdown_dir = Path("markdown_reports")
-        self.output_dir = Path("pdf_reports")
-        
-        # 确保输出目录存在
+        # 保持原有的输出目录设置
+        self.output_dir = self.dump_dir.parent / "output"
         self.output_dir.mkdir(exist_ok=True)
         
-        # 注册中文字体
-        self._register_fonts()
+        # 初始化Markdown转换器
+        from json_to_markdown import JSONToMarkdownConverter
+        self.md_converter = JSONToMarkdownConverter(str(self.dump_dir))
         
-        # 初始化markdown转换器
-        self.md_converter = JSONToMarkdownConverter(dump_dir)
+        # 注册字体
+        self._register_fonts()
     
     def _register_fonts(self):
-        """注册中文字体"""
+        """注册中文字体和emoji字体"""
         try:
-            # 尝试注册微软雅黑
+            # 注册中文字体
             font_paths = [
                 "C:/Windows/Fonts/msyh.ttc",  # 微软雅黑
                 "C:/Windows/Fonts/simhei.ttf",  # 黑体
@@ -63,20 +74,22 @@ class MarkdownToPDFConverter:
             
             for font_path in font_paths:
                 if os.path.exists(font_path):
-                    try:
+                    if font_path.endswith('.ttc'):
+                        pdfmetrics.registerFont(TTFont('ChineseFont', font_path, subfontIndex=0))
+                    else:
                         pdfmetrics.registerFont(TTFont('ChineseFont', font_path))
-                        print(f"✅ 成功注册中文字体: {font_path}")
-                        break
-                    except Exception as e:
-                        continue
-            else:
-                print("⚠️ 未找到中文字体，将使用默认字体")
-                
+                    break
+            
+            # 注册emoji字体
+            emoji_font_path = "C:/Windows/Fonts/seguiemj.ttf"  # Segoe UI Emoji
+            if os.path.exists(emoji_font_path):
+                pdfmetrics.registerFont(TTFont('EmojiFont', emoji_font_path))
+            
         except Exception as e:
             print(f"⚠️ 字体注册失败: {e}")
     
-    def _setup_styles(self):
-        """设置PDF样式"""
+    def _get_styles(self):
+        """获取样式表"""
         styles = getSampleStyleSheet()
         
         # 标题样式
@@ -86,27 +99,52 @@ class MarkdownToPDFConverter:
             fontName='ChineseFont',
             fontSize=18,
             spaceAfter=20,
-            alignment=TA_CENTER
+            alignment=TA_CENTER,
+            textColor=colors.black
         ))
         
-        # 二级标题样式
+        # 一级标题样式
         styles.add(ParagraphStyle(
             name='ChineseHeading1',
             parent=styles['Heading1'],
             fontName='ChineseFont',
-            fontSize=14,
+            fontSize=16,
             spaceAfter=12,
-            spaceBefore=12
+            spaceBefore=12,
+            textColor=colors.black
         ))
         
-        # 三级标题样式
+        # 二级标题样式
         styles.add(ParagraphStyle(
             name='ChineseHeading2',
             parent=styles['Heading2'],
             fontName='ChineseFont',
+            fontSize=14,
+            spaceAfter=10,
+            spaceBefore=10,
+            textColor=colors.black
+        ))
+        
+        # 三级标题样式
+        styles.add(ParagraphStyle(
+            name='ChineseHeading3',
+            parent=styles['Heading3'],
+            fontName='ChineseFont',
             fontSize=12,
             spaceAfter=8,
-            spaceBefore=8
+            spaceBefore=8,
+            textColor=colors.black
+        ))
+        
+        # 四级标题样式
+        styles.add(ParagraphStyle(
+            name='ChineseHeading4',
+            parent=styles['Heading3'],
+            fontName='ChineseFont',
+            fontSize=11,
+            spaceAfter=6,
+            spaceBefore=6,
+            textColor=colors.black
         ))
         
         # 正文样式
@@ -126,18 +164,42 @@ class MarkdownToPDFConverter:
             fontName='Courier',
             fontSize=9,
             spaceAfter=6,
-            spaceBefore=6,
-            leftIndent=20
+            leftIndent=20,
+            backgroundColor=colors.lightgrey
+        ))
+        
+        # 引用样式
+        styles.add(ParagraphStyle(
+            name='ChineseQuote',
+            parent=styles['Normal'],
+            fontName='ChineseFont',
+            fontSize=10,
+            leftIndent=20,
+            rightIndent=20,
+            spaceAfter=6,
+            textColor=colors.grey
         ))
         
         return styles
     
-    def _parse_markdown_to_pdf_elements(self, markdown_content: str, styles):
+    def _process_emoji_text(self, text):
+        """处理文本中的emoji，使用合适的字体"""
+        # 检测emoji并用特殊标记包围
+        emoji_pattern = r'[\U0001F600-\U0001F64F\U0001F300-\U0001F5FF\U0001F680-\U0001F6FF\U0001F1E0-\U0001F1FF\U00002600-\U000027BF\U0001F900-\U0001F9FF\U0001F018-\U0001F270]'
+        
+        def replace_emoji(match):
+            emoji = match.group(0)
+            return f'<font name="EmojiFont">{emoji}</font>'
+        
+        return re.sub(emoji_pattern, replace_emoji, text)
+    
+    def _parse_markdown_to_pdf_elements(self, markdown_content: str, styles) -> List:
         """解析Markdown内容为PDF元素"""
         elements = []
         lines = markdown_content.split('\n')
-        
         i = 0
+        page_num = 1  # 简化的页码计算
+        
         while i < len(lines):
             line = lines[i].strip()
             
@@ -147,158 +209,28 @@ class MarkdownToPDFConverter:
                 continue
             
             # 处理标题
-            if line.startswith('# '):
-                title = line[2:].strip()
-                elements.append(Paragraph(title, styles['ChineseTitle']))
-                elements.append(Spacer(1, 12))
-            elif line.startswith('## '):
-                heading = line[3:].strip()
-                elements.append(Paragraph(heading, styles['ChineseHeading1']))
-                elements.append(Spacer(1, 8))
-            elif line.startswith('### '):
-                heading = line[4:].strip()
-                elements.append(Paragraph(heading, styles['ChineseHeading2']))
-                elements.append(Spacer(1, 6))
-            
-            # 处理引用
-            elif line.startswith('> '):
-                quote = line[2:].strip()
-                import html
-                quote = html.escape(quote)
-                elements.append(Paragraph(f"<i>{quote}</i>", styles['ChineseNormal']))
-            
-            # 处理列表
-            elif line.startswith('- '):
-                item = line[2:].strip()
-                import html
-                item = html.escape(item)
-                elements.append(Paragraph(f"• {item}", styles['ChineseNormal']))
-            
-            # 处理表格
-            elif '|' in line and line.strip().startswith('|'):
-                # 收集表格行
-                table_rows = []
-                table_rows.append(line.strip())
+            if line.startswith('#'):
+                level = len(line) - len(line.lstrip('#'))
+                title = line.lstrip('#').strip()
                 
-                # 继续读取表格行
-                j = i + 1
-                while j < len(lines):
-                    next_line = lines[j].strip()
-                    if next_line and '|' in next_line and next_line.startswith('|'):
-                        table_rows.append(next_line)
-                        j += 1
-                    else:
-                        break
+                # 添加到目录
+                self.toc_entries.append((level, title, page_num))
                 
-                # 解析表格并添加到文档
-                if len(table_rows) > 1:
-                    self._add_table_to_elements(table_rows, elements, styles)
-                    i = j - 1  # 调整索引
-            
-            # 处理代码块
-            elif line.startswith('```'):
-                i += 1
-                code_lines = []
-                while i < len(lines) and not lines[i].strip().startswith('```'):
-                    code_lines.append(lines[i])
-                    i += 1
+                # 处理emoji
+                title_with_emoji = self._process_emoji_text(title)
                 
-                if code_lines:
-                    code_text = '\n'.join(code_lines)
-                    # 保持完整内容，不进行截断
-                    # HTML转义处理
-                    code_text = self._escape_html_preserve_emoji(code_text)
-                    elements.append(Paragraph(f"<pre>{code_text}</pre>", styles['ChineseCode']))
-                    elements.append(Spacer(1, 6))
-            
-            # 处理普通文本
-            else:
-                if line:
-                    import html
-                    import re
-                    # 先处理粗体文本（在转义前）
-                    line = re.sub(r'\*\*(.*?)\*\*', r'<BOLD>\1</BOLD>', line)
-                    # HTML转义处理（但保留emoji）
-                    line = self._escape_html_preserve_emoji(line)
-                    # 恢复粗体标签
-                    line = line.replace('&lt;BOLD&gt;', '<b>').replace('&lt;/BOLD&gt;', '</b>')
-                    elements.append(Paragraph(line, styles['ChineseNormal']))
+                if level == 1:
+                    elements.append(Paragraph(title_with_emoji, styles['ChineseHeading1']))
+                elif level == 2:
+                    elements.append(Paragraph(title_with_emoji, styles['ChineseHeading2']))
+                elif level == 3:
+                    elements.append(Paragraph(title_with_emoji, styles['ChineseHeading3']))
+                else:
+                    elements.append(Paragraph(title_with_emoji, styles['ChineseHeading4']))
             
             i += 1
         
         return elements
-    
-    def _escape_html_preserve_emoji(self, text):
-        """HTML转义但保留emoji字符"""
-        import html
-        import re
-        
-        # 匹配emoji的正则表达式（Unicode范围）
-        emoji_pattern = re.compile(
-            r'[\U0001F600-\U0001F64F]|'  # 表情符号
-            r'[\U0001F300-\U0001F5FF]|'  # 杂项符号和象形文字
-            r'[\U0001F680-\U0001F6FF]|'  # 交通和地图符号
-            r'[\U0001F1E0-\U0001F1FF]|'  # 区域指示符号
-            r'[\U00002600-\U000026FF]|'  # 杂项符号
-            r'[\U00002700-\U000027BF]|'  # 装饰符号
-            r'[\U0001F900-\U0001F9FF]|'  # 补充符号和象形文字
-            r'[\U0001FA70-\U0001FAFF]'   # 扩展A符号和象形文字
-        )
-        
-        # 找到所有emoji
-        emojis = emoji_pattern.findall(text)
-        
-        # 用占位符替换emoji
-        temp_text = text
-        placeholders = {}
-        for i, emoji in enumerate(emojis):
-            placeholder = f'__EMOJI_{i}__'
-            placeholders[placeholder] = emoji
-            temp_text = temp_text.replace(emoji, placeholder, 1)
-        
-        # HTML转义
-        escaped_text = html.escape(temp_text)
-        
-        # 恢复emoji
-        for placeholder, emoji in placeholders.items():
-            escaped_text = escaped_text.replace(placeholder, emoji)
-        
-        return escaped_text
-    
-    def _add_table_to_elements(self, table_rows, elements, styles):
-        """将表格添加到元素列表"""
-        # 解析表格数据
-        table_data = []
-        for row in table_rows:
-            # 移除首尾的|符号并分割
-            cells = [cell.strip() for cell in row.strip('|').split('|')]
-            # HTML转义处理（保留emoji）
-            cells = [self._escape_html_preserve_emoji(cell) for cell in cells]
-            table_data.append(cells)
-        
-        # 跳过分隔行（通常是第二行，包含---）
-        if len(table_data) > 1 and all('---' in cell or '-' in cell for cell in table_data[1]):
-            table_data.pop(1)
-        
-        if table_data:
-            # 创建表格
-            table = Table(table_data)
-            
-            # 设置表格样式
-            table_style = TableStyle([
-                ('BACKGROUND', (0, 0), (-1, 0), grey),  # 表头背景
-                ('TEXTCOLOR', (0, 0), (-1, 0), black),  # 表头文字颜色
-                ('ALIGN', (0, 0), (-1, -1), 'CENTER'),  # 居中对齐
-                ('FONTNAME', (0, 0), (-1, -1), 'ChineseFont'),  # 中文字体
-                ('FONTSIZE', (0, 0), (-1, -1), 9),  # 字体大小
-                ('BOTTOMPADDING', (0, 0), (-1, -1), 6),  # 底部填充
-                ('TOPPADDING', (0, 0), (-1, -1), 6),  # 顶部填充
-                ('GRID', (0, 0), (-1, -1), 1, black),  # 网格线
-            ])
-            
-            table.setStyle(table_style)
-            elements.append(table)
-            elements.append(Spacer(1, 12))  # 添加间距
     
     def convert_json_to_pdf_via_markdown(self, json_file_path: str) -> Optional[str]:
         """通过Markdown中间步骤将JSON转换为PDF
@@ -330,14 +262,37 @@ class MarkdownToPDFConverter:
             pdf_file = self.output_dir / f"{json_filename}.pdf"
             
             # 创建PDF文档
-            doc = SimpleDocTemplate(str(pdf_file), pagesize=A4)
-            styles = self._setup_styles()
+            doc = SimpleDocTemplate(
+                str(pdf_file),
+                pagesize=A4,
+                rightMargin=72,
+                leftMargin=72,
+                topMargin=72,
+                bottomMargin=18
+            )
+            
+            # 获取样式
+            styles = self._get_styles()
+            
+            # 重置目录项
+            self.toc_entries = []
             
             # 解析Markdown内容
-            elements = self._parse_markdown_to_pdf_elements(markdown_content, styles)
+            content_elements = self._parse_markdown_to_pdf_elements(markdown_content, styles)
             
-            # 生成PDF
-            doc.build(elements)
+            # 创建完整的文档结构：目录 + 内容
+            story = []
+            
+            # 添加目录
+            if self.toc_entries:
+                toc_elements = self._create_toc(styles)
+                story.extend(toc_elements)
+            
+            # 添加内容
+            story.extend(content_elements)
+            
+            # 构建PDF
+            doc.build(story)
             
             print(f"✅ PDF报告已生成: {pdf_file}")
             return str(pdf_file)
