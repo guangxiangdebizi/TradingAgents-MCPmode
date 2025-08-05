@@ -342,29 +342,21 @@ P/E比率为28.5，略高于行业平均水平。营收增长稳定，现金流�
 
 ### 🚀 使用导出工具
 
-#### 统一导出工具
+#### 推荐的导出流程
 
 ```bash
-# 查看所有可用的JSON文件
-python -m src.dumptools.export_tool --list
+# 第一步：转换为Markdown格式
+python -m src.dumptools.json_to_markdown --latest
 
-# 导出最新文件为Markdown格式
-python -m src.dumptools.export_tool --format markdown --latest
+# 第二步：从Markdown转换为PDF
+python -m src.dumptools.md2pdf -l -d "src/dump"
 
-# 导出最新文件为PDF格式
-python -m src.dumptools.export_tool --format pdf --latest
+# 第二步：从Markdown转换为DOCX
+python -m src.dumptools.md2docx -l -d "src/dump"
 
-# 导出最新文件为DOCX格式
-python -m src.dumptools.export_tool --format docx --latest
-
-# 导出最新文件为所有支持的格式
-python -m src.dumptools.export_tool --format all --latest
-
-# 批量导出所有JSON文件
-python -m src.dumptools.export_tool --format all --all
-
-# 导出指定文件
-python -m src.dumptools.export_tool --format pdf --file src/dump/session_20250730_104218.json
+# 一次性转换所有文件
+python -m src.dumptools.md2pdf -a -d "src/dump"
+python -m src.dumptools.md2docx -a -d "src/dump"
 ```
 
 <details>
@@ -380,13 +372,7 @@ python json_to_markdown.py -d "../dump" --latest
 python json_to_markdown.py -d "../dump" --all
 python json_to_markdown.py -d "../dump" --list
 
-# PDF转换器（已重构，直接从JSON生成PDF）
-python json_to_pdf.py -d "../dump" --latest
-python json_to_pdf.py -d "../dump" --all
 
-# DOCX转换器
-python json_to_docx.py -d "../dump" --latest
-python json_to_docx.py -d "../dump" --all
 
 # 通过Markdown中间步骤转换（推荐，内容完整性更好）
 python md2pdf.py -l -d "../dump"   # JSON→Markdown→PDF
@@ -418,8 +404,8 @@ python md2docx.py -a -d "../dump"  # 批量转换所有文件
 ```bash
 # 如果已安装所有依赖，可使用模块方式
 python -m src.dumptools.json_to_markdown --latest
-python -m src.dumptools.json_to_pdf --latest
-python -m src.dumptools.json_to_docx --latest
+python -m src.dumptools.md2pdf -l -d "src/dump"
+python -m src.dumptools.md2docx -l -d "src/dump"
 ```
 
 </details>
@@ -430,15 +416,17 @@ python -m src.dumptools.json_to_docx --latest
 
 ```
 TradingAgents-MCPmode/
-├── markdown_reports/          # Markdown报告目录
-│   ├── session_20250730_104218.md
-│   └── session_20250730_112128.md
-├── pdf_reports/              # PDF报告目录
-│   ├── session_20250730_104218.pdf
-│   └── session_20250730_112128.pdf
-└── docx_reports/             # DOCX报告目录
-    ├── session_20250730_104218.docx
-    └── session_20250730_112128.docx
+└── src/
+    └── dumptools/
+        ├── markdown_reports/          # Markdown报告目录
+        │   ├── session_20250730_104218.md
+        │   └── session_20250730_112128.md
+        ├── pdf_reports/              # PDF报告目录
+        │   ├── session_20250730_104218.pdf
+        │   └── session_20250730_112128.pdf
+        └── docx_reports/             # DOCX报告目录
+            ├── session_20250730_104218.docx
+            └── session_20250730_112128.docx
 ```
 
 ### 🔄 导出流程架构
@@ -450,46 +438,34 @@ TradingAgents-MCPmode/
 JSON数据 → Markdown格式
 ```
 
-#### PDF导出（两种方式）
+#### PDF导出
 ```
-方式1: JSON数据 → PDF格式（直接生成）
-方式2: JSON数据 → Markdown → PDF（两步转换，推荐）
+JSON数据 → Markdown → PDF（推荐）
 ```
 
-#### DOCX导出（两种方式）
+#### DOCX导出
 ```
-方式1: JSON数据 → DOCX格式（直接生成）
-方式2: JSON数据 → Markdown → DOCX（两步转换，推荐）
+JSON数据 → Markdown → DOCX（推荐）
 ```
 
 #### 流程说明
 1. **Markdown转换**：解析JSON数据结构，生成结构化Markdown文档
-2. **PDF转换**：
-   - 直接方式：使用ReportLab库从JSON直接生成PDF，支持智能中文字体注册
-   - 两步方式：先转为Markdown，再使用md2pdf.py转换，内容完整性更好
-3. **DOCX转换**：
-   - 直接方式：使用python-docx库从JSON直接生成DOCX文档
-   - 两步方式：先转为Markdown，再使用md2docx.py转换，内容完整性更好
+2. **PDF转换**：先转为Markdown，再使用md2pdf.py转换，确保内容完整性
+3. **DOCX转换**：先转为Markdown，再使用md2docx.py转换，确保内容完整性
 
-#### 转换方式对比
+#### 转换方式优势
 
-**直接转换方式**：
-- ✅ 性能更快，减少转换步骤
-- ✅ 格式专门优化
-- ❌ 可能存在内容截断问题
-
-**两步转换方式（推荐）**：
+**Markdown→PDF/DOCX转换方式**：
 - ✅ 内容完整性最佳，不会截断长内容
 - ✅ 基于成熟的Markdown格式，稳定性更好
 - ✅ 支持完整的分析报告内容
-- ❌ 转换步骤稍多
+- ✅ 模块化设计，易于维护
 
 #### 优势
-- **多种选择**：提供直接转换和两步转换两种方式
-- **内容完整**：两步转换确保所有分析内容都被保留
+- **内容完整**：确保所有分析内容都被保留
 - **格式优化**：每种格式都有专门优化的样式和布局
 - **稳定性**：减少依赖链，提高转换成功率
-- **扩展性**：添加新格式只需实现对应的直接转换器
+- **扩展性**：模块化设计，易于添加新格式
 - **质量保证**：每种格式都有独立的内容验证和格式化标准
 
 ### 🎨 报告样式特性
@@ -573,8 +549,8 @@ pip install weasyprint  # 可选，仅统一导出工具需要
 - **weasyprint**: 仅统一导出工具需要，单独使用PDF转换器不需要
 
 **重要更新**：
-- ✅ **PDF转换器已重构**：`json_to_pdf.py`现在直接从JSON生成PDF，不再依赖markdown2或weasyprint
-- ✅ **更好的兼容性**：PDF转换器使用reportlab，在Windows系统上更稳定
+- ✅ **简化架构**：采用 JSON→Markdown→PDF/DOCX 的统一流程
+- ✅ **更好的兼容性**：基于成熟的Markdown格式，稳定性更高
 - ✅ **智能字体支持**：自动注册中文字体，支持表情符号显示
 
 </details>
@@ -591,44 +567,19 @@ pip install weasyprint  # 可选，仅统一导出工具需要
 <details>
 <summary><strong>⚠️ 导出工具常见问题</strong></summary>
 
-**问题1：PDF转换器运行正常**
+**问题1：转换器使用**
 
-✅ **好消息**：`json_to_pdf.py`已重构，不再依赖WeasyPrint，使用更稳定的ReportLab库。
+✅ **推荐流程**：使用 Markdown 作为中间格式的转换方式。
 
 ```bash
-# 直接使用PDF转换器（推荐）
+# 推荐的转换流程
 cd src/dumptools
-python json_to_pdf.py -d "../dump" --latest
+# 第一步：JSON转Markdown
+python json_to_markdown.py -d "../dump" --latest
+# 第二步：Markdown转PDF/DOCX
+python md2pdf.py -l -d "../dump"
+python md2docx.py -l -d "../dump"
 ```
-
-**问题2：统一导出工具WeasyPrint错误**
-
-如果使用统一导出工具遇到WeasyPrint错误：
-```
-WeasyPrint could not import some external libraries
-OSError: dlopen() failed to load a library: libgobject-2.0-0
-```
-
-**解决方案**：
-
-1. **推荐方案**：直接使用单独的转换器
-   ```bash
-   # 进入dumptools目录
-   cd src/dumptools
-   
-   # 使用重构后的PDF转换器（无WeasyPrint依赖）
-   python json_to_pdf.py -d "../dump" --latest
-   python json_to_docx.py -d "../dump" --latest
-   ```
-
-2. **备选方案**：修复WeasyPrint（仅统一工具需要）
-   ```bash
-   # 方法1：使用conda
-   conda install -c conda-forge weasyprint
-   
-   # 方法2：移除WeasyPrint，统一工具会自动降级
-   pip uninstall weasyprint
-   ```
 
 </details>
 
@@ -641,13 +592,11 @@ python -c "import markdown2; print('✅ markdown2 - Markdown转换器需要')"
 python -c "import docx; print('✅ python-docx - DOCX转换器需要')"
 python -c "import reportlab; print('✅ reportlab - PDF转换器需要')"
 
-# 检查可选依赖（仅统一导出工具需要）
-python -c "try: import weasyprint; print('✅ weasyprint - 统一导出工具可用'); except: print('⚠️ weasyprint - 统一导出工具不可用，但单独转换器仍可正常工作')"
-
 # 快速测试转换器
 cd src/dumptools
-python json_to_pdf.py --help
-python json_to_docx.py --help
+python json_to_markdown.py --help
+python md2pdf.py --help
+python md2docx.py --help
 ```
 
 </details>
@@ -679,9 +628,8 @@ TradingAgents-MCPmode/
     └── dumptools/         # 报告导出工具
         ├── __init__.py
         ├── json_to_markdown.py  # Markdown转换器
-        ├── json_to_pdf.py       # PDF转换器
-        ├── json_to_docx.py      # DOCX转换器
-        └── export_tool.py       # 统一导出工具
+        ├── md2pdf.py           # Markdown转PDF转换器
+        └── md2docx.py          # Markdown转DOCX转换器
 ```
 
 ### 添加新智能体
@@ -703,12 +651,11 @@ TradingAgents-MCPmode/
 1. 在 `src/dumptools/` 目录下创建新的转换器文件
 2. 实现转换逻辑，参考现有转换器的接口：
    - 继承或参考现有转换器的结构
-   - 实现 `convert_json_to_[format]()` 方法
+   - 实现 `convert_markdown_to_[format]()` 方法
    - 实现 `convert_latest_json()` 方法
    - 实现 `convert_all_json()` 方法
 3. 在 `src/dumptools/__init__.py` 中导入新转换器
-4. 在 `export_tool.py` 中添加新格式支持
-5. 更新README文档中的格式说明
+4. 更新README文档中的格式说明
 
 ## 🐛 故障排除
 

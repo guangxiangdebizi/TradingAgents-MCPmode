@@ -51,7 +51,8 @@ class MarkdownToPDFConverter:
             dump_dir: dump文件夹路径
         """
         self.dump_dir = Path(dump_dir)
-        self.output_dir = self.dump_dir.parent / "output"
+        # 输出到 dumptools/pdf_reports/ 目录
+        self.output_dir = Path(__file__).parent / "pdf_reports"
         self.output_dir.mkdir(exist_ok=True)
         
         # 初始化Markdown转换器

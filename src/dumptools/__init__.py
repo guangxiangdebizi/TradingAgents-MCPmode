@@ -8,23 +8,23 @@ Dump Tools Package
 from .json_to_markdown import JSONToMarkdownConverter
 
 try:
-    from .json_to_pdf import JSONToPDFConverter
+    from .md2pdf import MarkdownToPDFConverter
     PDF_AVAILABLE = True
 except ImportError:
     PDF_AVAILABLE = False
-    JSONToPDFConverter = None
+    MarkdownToPDFConverter = None
 
 try:
-    from .json_to_docx import JSONToDocxConverter
+    from .md2docx import MarkdownToDocxConverter
     DOCX_AVAILABLE = True
 except ImportError:
     DOCX_AVAILABLE = False
-    JSONToDocxConverter = None
+    MarkdownToDocxConverter = None
 
 __all__ = ['JSONToMarkdownConverter']
 
 if PDF_AVAILABLE:
-    __all__.append('JSONToPDFConverter')
+    __all__.append('MarkdownToPDFConverter')
 
 if DOCX_AVAILABLE:
-    __all__.append('JSONToDocxConverter')
+    __all__.append('MarkdownToDocxConverter')

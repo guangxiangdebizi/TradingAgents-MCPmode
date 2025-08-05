@@ -189,23 +189,23 @@ class BaseAgent(ABC):
                                     'tool_args': tool_args,
                                     'tool_id': tool_id
                                 })
-                    
-                    # 检查是否是工具返回结果消息
-                    elif hasattr(msg, 'tool_call_id'):
-                        tool_result = getattr(msg, 'content', 'No result')
-                        print(f"📋 [{self.agent_name}] 工具返回结果: {str(tool_result)[:200]}...")
                         
-                        # 找到对应的工具调用并记录完整信息
-                        for tool_call in tool_calls_found:
-                            if tool_call.get('tool_id') == getattr(msg, 'tool_call_id', None):
-                                # 记录到progress_tracker
-                                if progress_tracker:
-                                    progress_tracker.add_mcp_tool_call(
-                                        agent_name=self.agent_name,
-                                        tool_name=tool_call['tool_name'],
-                                        tool_args=tool_call['tool_args'],
-                                        tool_result=tool_result
-                                    )
+                        # 检查是否是工具返回结果消息
+                        elif hasattr(msg, 'tool_call_id'):
+                            tool_result = getattr(msg, 'content', 'No result')
+                            print(f"📋 [{self.agent_name}] 工具返回结果: {str(tool_result)[:200]}...")
+                            
+                            # 找到对应的工具调用并记录完整信息
+                            for tool_call in tool_calls_found:
+                                if tool_call.get('tool_id') == getattr(msg, 'tool_call_id', None):
+                                    # 记录到progress_tracker
+                                    if progress_tracker:
+                                        progress_tracker.add_mcp_tool_call(
+                                            agent_name=self.agent_name,
+                                            tool_name=tool_call['tool_name'],
+                                            tool_args=tool_call['tool_args'],
+                                            tool_result=tool_result
+                                        )
                                 
                                 # 记录到state
                                 if isinstance(state, dict):
@@ -225,17 +225,17 @@ class BaseAgent(ABC):
                                         tool_args=tool_call['tool_args'],
                                         tool_result=tool_result
                                     )
-                    
-                    # 提取最终回复
-                    if messages:
-                        # 通常最后一个消息是最终的AI回复
-                        final_message = messages[-1]
-                        if hasattr(final_message, 'content'):
-                            result = final_message.content
+                        
+                        # 提取最终回复
+                        if messages:
+                            # 通常最后一个消息是最终的AI回复
+                            final_message = messages[-1]
+                            if hasattr(final_message, 'content'):
+                                result = final_message.content
+                            else:
+                                result = "(无法提取内容)"
                         else:
-                            result = "(无法提取内容)"
-                    else:
-                        result = "(未收到消息)"
+                            result = "(未收到消息)"
                         
                 except Exception as mcp_error:
                     print(f"⚠️ [{self.agent_name}] MCP工具调用失败，回退到无工具模式: {mcp_error}")

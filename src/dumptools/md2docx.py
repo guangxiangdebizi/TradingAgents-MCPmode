@@ -37,8 +37,8 @@ class MarkdownToDocxConverter:
             dump_dir: dump文件夹路径
         """
         self.dump_dir = Path(dump_dir)
-        # 保持原有的输出目录设置
-        self.output_dir = self.dump_dir.parent / "src/dump"
+        # 输出到 dumptools/docx_reports/ 目录
+        self.output_dir = Path(__file__).parent / "docx_reports"
         self.output_dir.mkdir(exist_ok=True)
         
         # 初始化Markdown转换器
