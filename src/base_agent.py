@@ -121,7 +121,7 @@ class BaseAgent(ABC):
 
     
     async def call_llm_with_context(self, state: AgentState, user_message: str, progress_tracker=None) -> str:
-        """使用上下文调用LLM"""
+        """调用LLM并处理上下文"""
         try:
             # 确保智能体实例已创建
             self.ensure_agent_created()
@@ -169,8 +169,64 @@ class BaseAgent(ABC):
                         "messages": messages
                     })
                     
-                    # 提取最终回复
+                    # 解析和显示工具调用信息
                     messages = response.get("messages", [])
+                    tool_calls_found = []
+                    
+                    for msg in messages:
+                        # 检查是否是工具调用消息
+                        if hasattr(msg, 'tool_calls') and msg.tool_calls:
+                            for tool_call in msg.tool_calls:
+                                tool_name = tool_call.get('name', 'unknown')
+                                tool_args = tool_call.get('args', {})
+                                tool_id = tool_call.get('id', 'unknown')
+                                
+                                print(f"🔧 [{self.agent_name}] 调用工具: {tool_name}")
+                                print(f"   参数: {tool_args}")
+                                
+                                tool_calls_found.append({
+                                    'tool_name': tool_name,
+                                    'tool_args': tool_args,
+                                    'tool_id': tool_id
+                                })
+                    
+                    # 检查是否是工具返回结果消息
+                    elif hasattr(msg, 'tool_call_id'):
+                        tool_result = getattr(msg, 'content', 'No result')
+                        print(f"📋 [{self.agent_name}] 工具返回结果: {str(tool_result)[:200]}...")
+                        
+                        # 找到对应的工具调用并记录完整信息
+                        for tool_call in tool_calls_found:
+                            if tool_call.get('tool_id') == getattr(msg, 'tool_call_id', None):
+                                # 记录到progress_tracker
+                                if progress_tracker:
+                                    progress_tracker.add_mcp_tool_call(
+                                        agent_name=self.agent_name,
+                                        tool_name=tool_call['tool_name'],
+                                        tool_args=tool_call['tool_args'],
+                                        tool_result=tool_result
+                                    )
+                                
+                                # 记录到state
+                                if isinstance(state, dict):
+                                    if 'mcp_tool_calls' not in state:
+                                        state['mcp_tool_calls'] = []
+                                    state['mcp_tool_calls'].append({
+                                        'agent_name': self.agent_name,
+                                        'tool_name': tool_call['tool_name'],
+                                        'tool_args': tool_call['tool_args'],
+                                        'tool_result': str(tool_result),
+                                        'timestamp': datetime.now().isoformat()
+                                    })
+                                else:
+                                    state.add_mcp_tool_call(
+                                        agent_name=self.agent_name,
+                                        tool_name=tool_call['tool_name'],
+                                        tool_args=tool_call['tool_args'],
+                                        tool_result=tool_result
+                                    )
+                    
+                    # 提取最终回复
                     if messages:
                         # 通常最后一个消息是最终的AI回复
                         final_message = messages[-1]
