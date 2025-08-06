@@ -56,25 +56,75 @@
 
 ```mermaid
 graph TD
-    A[公司概述分析师] --> B[市场分析师]
-    B --> C[情绪分析师]
-    C --> D[新闻分析师]
-    D --> E[基本面分析师]
-    E --> F[股东分析师]
-    F --> G[产品分析师]
-    G --> H[看涨研究员]
-    H --> I{辩论是否继续?}
-    I -->|是| J[看跌研究员]
-    J --> I
-    I -->|否| K[研究经理]
-    K --> L[交易员]
-    L --> M[激进风险分析师]
-    M --> N{风险辩论是否继续?}
-    N -->|是| O[保守风险分析师]
-    O --> P[中性风险分析师]
-    P --> N
-    N -->|否| Q[风险经理]
-    Q --> R[最终建议]
+    %% 用户输入
+    USER[👤 用户输入<br/>user_query]
+    
+    %% 第0阶段：公司概述分析师
+    A0[🏢 公司概述分析师<br/>📥 输入：user_query<br/>📤 输出：company_details + company_overview_report]
+    
+    %% 第1阶段：分析师团队
+    A1[🔍 市场分析师<br/>📥 输入：user_query + company_details<br/>📤 输出：market_report]
+    A2[😊 情绪分析师<br/>📥 输入：user_query + company_details<br/>📤 输出：sentiment_report]
+    A3[📰 新闻分析师<br/>📥 输入：user_query + company_details<br/>📤 输出：news_report]
+    A4[📊 基本面分析师<br/>📥 输入：user_query + company_details<br/>📤 输出：fundamentals_report]
+    A5[👥 股东分析师<br/>📥 输入：user_query + company_details<br/>📤 输出：shareholder_report]
+    A6[🏭 产品分析师<br/>📥 输入：user_query + company_details<br/>📤 输出：product_report]
+    
+    %% 第2阶段：研究员团队
+    B1[📈 看涨研究员<br/>📥 输入：user_query + 全部7个分析师报告<br/>📤 输出：看涨论证 + 辞论历史]
+    B2[📉 看跌研究员<br/>📥 输入：user_query + 全部7个分析师报告 + 辞论历史<br/>📤 输出：看跌论证 + 辞论历史]
+    
+    %% 第3阶段：管理层
+    C1[🎯 研究经理<br/>📥 输入：user_query + 全部7个分析师报告 + 完整辞论历史<br/>📤 输出：investment_plan]
+    C2[💰 交易员<br/>📥 输入：user_query + 全部7个分析师报告 + 辞论历史 + investment_plan<br/>📤 输出：trader_investment_plan]
+    
+    %% 第4阶段：风险管理团队
+    D1[⚡ 激进风险分析师<br/>📥 输入：user_query + 全部7个分析师报告 + 辞论历史 + investment_plan + trader_investment_plan<br/>📤 输出：激进风险观点 + 风险辞论历史]
+    D2[🛡️ 保守风险分析师<br/>📥 输入：user_query + 全部7个分析师报告 + 辞论历史 + investment_plan + trader_investment_plan + 风险辞论历史<br/>📤 输出：保守风险观点 + 风险辞论历史]
+    D3[⚖️ 中性风险分析师<br/>📥 输入：user_query + 全部7个分析师报告 + 辞论历史 + investment_plan + trader_investment_plan + 风险辞论历史<br/>📤 输出：中性风险观点 + 风险辞论历史]
+    D4[🎯 风险经理<br/>📥 输入：user_query + 全部7个分析师报告 + 辞论历史 + investment_plan + trader_investment_plan + 完整风险辞论历史<br/>📤 输出：final_trade_decision]
+    
+    %% 执行流程
+    USER --> A0
+    A0 --> A1 --> A2 --> A3 --> A4 --> A5 --> A6
+    A6 --> B1
+    B1 -.->|辞论循环| B2
+    B2 -.->|辞论循环| B1
+    B1 --> C1
+    C1 --> C2
+    C2 --> D1
+    D1 -.->|风险辞论循环| D2
+    D2 -.->|风险辞论循环| D3
+    D3 -.->|风险辞论循环| D1
+    D1 --> D4
+    D2 --> D4
+    D3 --> D4
+    
+    %% 关键数据流标注
+    A0 -.->|company_details<br/>仅传递给分析师| A1
+    A0 -.->|company_details<br/>仅传递给分析师| A2
+    A0 -.->|company_details<br/>仅传递给分析师| A3
+    A0 -.->|company_details<br/>仅传递给分析师| A4
+    A0 -.->|company_details<br/>仅传递给分析师| A5
+    A0 -.->|company_details<br/>仅传递给分析师| A6
+    
+    %% 样式设置
+    style USER fill:#f9f9f9,stroke:#333,stroke-width:3px
+    style A0 fill:#fff2cc,stroke:#d6b656,stroke-width:2px
+    style A1 fill:#e1f5fe,stroke:#0277bd
+    style A2 fill:#e1f5fe,stroke:#0277bd
+    style A3 fill:#e1f5fe,stroke:#0277bd
+    style A4 fill:#e1f5fe,stroke:#0277bd
+    style A5 fill:#e1f5fe,stroke:#0277bd
+    style A6 fill:#e1f5fe,stroke:#0277bd
+    style B1 fill:#e8f5e8,stroke:#2e7d32
+    style B2 fill:#e8f5e8,stroke:#2e7d32
+    style C1 fill:#fff3e0,stroke:#ef6c00
+    style C2 fill:#fff3e0,stroke:#ef6c00
+    style D1 fill:#fce4ec,stroke:#c2185b
+    style D2 fill:#fce4ec,stroke:#c2185b
+    style D3 fill:#fce4ec,stroke:#c2185b
+    style D4 fill:#fce4ec,stroke:#c2185b
 ```
 
 ## 🚀 快速开始
