@@ -36,6 +36,7 @@ class AgentState(MessagesState):
     news_report: str = ""  # 新闻分析师报告
     fundamentals_report: str = ""  # 基本面分析师报告
     shareholder_report: str = ""  # 股东结构分析师报告
+    product_report: str = ""  # 产品分析师报告
     
     # 研究员辩论状态
     investment_debate_state: Dict[str, Any] = {}
@@ -95,7 +96,8 @@ class AgentState(MessagesState):
             "sentiment_report": self.sentiment_report,
             "news_report": self.news_report,
             "fundamentals_report": self.fundamentals_report,
-            "shareholder_report": self.shareholder_report
+            "shareholder_report": self.shareholder_report,
+            "product_report": self.product_report
         }
     
     def get_debate_summary(self) -> str:

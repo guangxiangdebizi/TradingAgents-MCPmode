@@ -5,7 +5,8 @@ from .analysts import (
     MarketAnalyst,
     SentimentAnalyst, 
     NewsAnalyst,
-    FundamentalsAnalyst
+    FundamentalsAnalyst,
+    ProductAnalyst
 )
 
 from .researchers import (
@@ -31,6 +32,7 @@ __all__ = [
     'SentimentAnalyst',
     'NewsAnalyst', 
     'FundamentalsAnalyst',
+    'ProductAnalyst',
     
     # 研究员
     'BullResearcher',

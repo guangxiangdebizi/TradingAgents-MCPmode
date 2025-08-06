@@ -9,7 +9,7 @@ from .agent_states import AgentState
 from .mcp_manager import MCPManager
 from .progress_tracker import ProgressTracker
 from .agents.analysts import (
-    MarketAnalyst, SentimentAnalyst, NewsAnalyst, FundamentalsAnalyst, ShareholderAnalyst
+    MarketAnalyst, SentimentAnalyst, NewsAnalyst, FundamentalsAnalyst, ShareholderAnalyst, ProductAnalyst
 )
 from .agents.researchers import BullResearcher, BearResearcher
 from .agents.managers import ResearchManager, Trader
@@ -54,6 +54,7 @@ class WorkflowOrchestrator:
             "news_analyst": NewsAnalyst(self.mcp_manager),
             "fundamentals_analyst": FundamentalsAnalyst(self.mcp_manager),
             "shareholder_analyst": ShareholderAnalyst(self.mcp_manager),
+            "product_analyst": ProductAnalyst(self.mcp_manager),
             
             # 研究员团队
             "bull_researcher": BullResearcher(self.mcp_manager),
@@ -83,6 +84,7 @@ class WorkflowOrchestrator:
         workflow.add_node("news_analyst", self._news_analyst_node)
         workflow.add_node("fundamentals_analyst", self._fundamentals_analyst_node)
         workflow.add_node("shareholder_analyst", self._shareholder_analyst_node)
+        workflow.add_node("product_analyst", self._product_analyst_node)
         
         workflow.add_node("bull_researcher", self._bull_researcher_node)
         workflow.add_node("bear_researcher", self._bear_researcher_node)
@@ -104,9 +106,10 @@ class WorkflowOrchestrator:
         workflow.add_edge("sentiment_analyst", "news_analyst")
         workflow.add_edge("news_analyst", "fundamentals_analyst")
         workflow.add_edge("fundamentals_analyst", "shareholder_analyst")
+        workflow.add_edge("shareholder_analyst", "product_analyst")
         
         # 第二阶段：研究员辩论
-        workflow.add_edge("shareholder_analyst", "bull_researcher")
+        workflow.add_edge("product_analyst", "bull_researcher")
         workflow.add_conditional_edges(
             "bull_researcher",
             self._should_continue_investment_debate,
@@ -217,6 +220,18 @@ class WorkflowOrchestrator:
             self.progress_manager.start_agent("shareholder_analyst", "主要股东和机构持股分析")
         
         result = await self.agents["shareholder_analyst"].process(state, self.progress_manager)
+        
+        return result
+
+    async def _product_analyst_node(self, state: AgentState) -> AgentState:
+        """产品分析师节点"""
+        print("🏭 产品分析师")
+        
+        # 记录智能体开始工作
+        if self.progress_manager:
+            self.progress_manager.start_agent("product_analyst", "公司主营业务和产品分析")
+        
+        result = await self.agents["product_analyst"].process(state, self.progress_manager)
         
         return result
 

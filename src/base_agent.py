@@ -66,14 +66,16 @@ class BaseAgent(ABC):
             sentiment_report = state.get('sentiment_report', '')
             news_report = state.get('news_report', '')
             fundamentals_report = state.get('fundamentals_report', '')
-            shareholder_report = state.get('shareholder_report', '')  # 添加这一行
+            shareholder_report = state.get('shareholder_report', '')
+            product_report = state.get('product_report', '')
             
             reports = {
                 "market_report": market_report,
                 "sentiment_report": sentiment_report,
                 "news_report": news_report,
                 "fundamentals_report": fundamentals_report,
-                "shareholder_report": shareholder_report  # 添加这一行
+                "shareholder_report": shareholder_report,
+                "product_report": product_report
             }
             
             # 获取辩论历史
