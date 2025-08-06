@@ -76,11 +76,13 @@ class MCPManager:
         
         # 从环境变量加载权限配置
         env_mapping = {
+            "company_overview_analyst": "COMPANY_OVERVIEW_ANALYST_MCP_ENABLED",
             "market_analyst": "MARKET_ANALYST_MCP_ENABLED",
             "sentiment_analyst": "SENTIMENT_ANALYST_MCP_ENABLED",
             "news_analyst": "NEWS_ANALYST_MCP_ENABLED",
             "fundamentals_analyst": "FUNDAMENTALS_ANALYST_MCP_ENABLED",
             "shareholder_analyst": "SHAREHOLDER_ANALYST_MCP_ENABLED",
+            "product_analyst": "PRODUCT_ANALYST_MCP_ENABLED",
             "bull_researcher": "BULL_RESEARCHER_MCP_ENABLED",
             "bear_researcher": "BEAR_RESEARCHER_MCP_ENABLED",
             "research_manager": "RESEARCH_MANAGER_MCP_ENABLED",
