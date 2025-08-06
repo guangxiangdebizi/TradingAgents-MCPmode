@@ -5,7 +5,7 @@ from ..agent_states import AgentState
 from ..mcp_manager import MCPManager
 from datetime import datetime
 
-
+current_datetime = datetime.now()
 class CompanyOverviewAnalyst(BaseAgent):
     """公司概述分析师 - 负责获取公司基础信息和概览"""
     
@@ -17,11 +17,9 @@ class CompanyOverviewAnalyst(BaseAgent):
         )
     
     def get_system_prompt(self, state: AgentState) -> str:
-        current_datetime = datetime.now()
+        
         return f"""
 你是一位专业的公司概述分析师，负责为后续分析师提供准确的公司基础信息。
-
-当前时间：{current_datetime.strftime('%Y年%m月%d日 %H:%M:%S')} ({current_datetime.strftime('%A')})
 
 重要工作原则：
 - 必须使用可用的外部工具获取最新的公司基础信息
@@ -59,15 +57,8 @@ class CompanyOverviewAnalyst(BaseAgent):
             analysis_request = f"""
 请对用户问题 "{user_query}" 中提到的公司进行基础信息收集。
 
-请重点获取以下信息：
-1. 公司准确全名、股票代码、所属交易所和市场
-2. 公司基本信息：成立时间、总部、行业分类、业务范围
-3. 公司规模：员工数、市值等基础数据
-4. 主要业务领域和产品/服务概述
-5. 行业地位和主要竞争对手
-6. 近期重要发展动态（如有）
+当前时间：{current_datetime.strftime('%Y年%m月%d日 %H:%M:%S')} ({current_datetime.strftime('%A')})
 
-重要提示：请务必使用您可用的外部工具来获取最新、准确的公司基础信息。
 
 """
             
@@ -113,7 +104,7 @@ class MarketAnalyst(BaseAgent):
         )
     
     def get_system_prompt(self, state: AgentState) -> str:
-        current_datetime = datetime.now()
+        
         return f"""
 你是一位资深的市场分析师，专门负责分析股票市场的整体趋势和技术指标。
 
@@ -202,11 +193,8 @@ class ProductAnalyst(BaseAgent):
         )
     
     def get_system_prompt(self, state: AgentState) -> str:
-        current_datetime = datetime.now()
         return f"""
 你是一位资深的产品分析师，专门分析公司的主营业务、产品线和商业模式。
-
-当前时间：{current_datetime.strftime('%Y年%m月%d日 %H:%M:%S')} ({current_datetime.strftime('%A')})
 
 重要工作原则：
 - 必须使用可用的外部工具获取最新的业务数据和产品信息
@@ -254,13 +242,8 @@ class ProductAnalyst(BaseAgent):
             analysis_request = f"""
 请对用户问题 "{user_query}" 进行全面的产品业务分析。
 
-请特别关注以下方面：
-1. 基于公司基础信息，深入分析主营业务构成和收入占比
-2. 结合公司行业地位，评估核心产品的市场竞争力
-3. 考虑公司规模和发展阶段，分析产品创新能力
-4. 根据公司业务特性，识别客户结构和依赖度风险
+当前时间：{current_datetime.strftime('%Y年%m月%d日 %H:%M:%S')} ({current_datetime.strftime('%A')})
 
-重要提示：请务必使用您可用的外部工具来获取最新的业务数据和产品信息，不要仅凭已有知识进行分析。
 
 """
             
@@ -302,11 +285,9 @@ class SentimentAnalyst(BaseAgent):
         )
     
     def get_system_prompt(self, state: AgentState) -> str:
-        current_datetime = datetime.now()
+        
         return f"""
 你是一位专业的市场情绪分析师，专门分析社交媒体、新闻评论和投资者情绪。
-
-当前时间：{current_datetime.strftime('%Y年%m月%d日 %H:%M:%S')} ({current_datetime.strftime('%A')})
 
 重要工作原则：
 - 必须使用可用的外部工具获取最新的市场情绪数据
@@ -343,11 +324,8 @@ class SentimentAnalyst(BaseAgent):
             analysis_request = f"""
 请对用户问题 "{user_query}" 进行全面的市场情绪分析。
 
-请特别关注以下方面：
-1. 基于公司基础信息，搜索相关的社交媒体和投资者讨论
-2. 结合公司行业地位，分析市场情绪的特点和趋势
-3. 考虑公司规模和知名度，评估情绪数据的可靠性
-4. 根据公司业务特性，识别情绪驱动的投资机会或风险
+当前时间：{current_datetime.strftime('%Y年%m月%d日 %H:%M:%S')} ({current_datetime.strftime('%A')})
+
 
 """
             
@@ -386,11 +364,9 @@ class NewsAnalyst(BaseAgent):
         )
     
     def get_system_prompt(self, state: AgentState) -> str:
-        current_datetime = datetime.now()
+        
         return f"""
 你是一位专业的新闻分析师，专门分析影响股票价格的新闻事件和信息。
-
-当前时间：{current_datetime.strftime('%Y年%m月%d日 %H:%M:%S')} ({current_datetime.strftime('%A')})
 
 重要工作原则：
 - 必须使用可用的外部工具获取最新的新闻信息和市场数据
@@ -427,11 +403,8 @@ class NewsAnalyst(BaseAgent):
             analysis_request = f"""
 请对用户问题 "{user_query}" 进行全面的新闻信息分析。
 
-请特别关注以下方面：
-1. 基于公司准确名称和股票代码，搜索最新相关新闻
-2. 结合公司所属行业，关注行业政策和发展动态
-3. 考虑公司业务领域，分析相关监管变化和市场趋势
-4. 根据公司竞争地位，评估重大事件对公司的具体影响
+当前时间：{current_datetime.strftime('%Y年%m月%d日 %H:%M:%S')} ({current_datetime.strftime('%A')})
+
 
 """
             
@@ -470,11 +443,9 @@ class FundamentalsAnalyst(BaseAgent):
         )
     
     def get_system_prompt(self, state: AgentState) -> str:
-        current_datetime = datetime.now()
+        
         return f"""
 你是一位资深的基本面分析师，专门分析公司的财务状况和内在价值。
-
-当前时间：{current_datetime.strftime('%Y年%m月%d日 %H:%M:%S')} ({current_datetime.strftime('%A')})
 
 重要工作原则：
 - 必须使用可用的外部工具获取最新的财务数据和公司信息
@@ -518,13 +489,8 @@ class FundamentalsAnalyst(BaseAgent):
             analysis_request = f"""
 请对用户问题 "{user_query}" 进行全面的基本面分析。
 
-请特别关注以下方面：
-1. 基于公司准确信息，获取最新的财务报表和关键指标
-2. 结合公司业务特点，重点分析相关财务比率
-3. 考虑公司行业地位，进行同行业对比分析
-4. 根据公司发展阶段，评估成长性和盈利能力
+当前时间：{current_datetime.strftime('%Y年%m月%d日 %H:%M:%S')} ({current_datetime.strftime('%A')})
 
-重要提示：请务必使用您可用的外部工具来获取最新的财务数据和公司信息，不要仅凭已有知识进行分析。
 
 """
             
@@ -563,11 +529,9 @@ class ShareholderAnalyst(BaseAgent):
         )
     
     def get_system_prompt(self, state: AgentState) -> str:
-        current_datetime = datetime.now()
+        
         return f"""
 你是一位资深的股东结构分析师，专门分析股东构成和大宗交易情况，从股权结构角度挖掘投资线索。
-
-当前时间：{current_datetime.strftime('%Y年%m月%d日 %H:%M:%S')} ({current_datetime.strftime('%A')})
 
 重要工作原则：
 - 必须使用可用的外部工具获取最新的股东数据和大宗交易信息
@@ -614,11 +578,8 @@ class ShareholderAnalyst(BaseAgent):
             analysis_request = f"""
 请对用户问题 "{user_query}" 进行全面的股东结构和大宗交易分析。
 
-请特别关注以下方面：
-1. 基于公司准确信息，获取最新的股东户数和结构变化
-2. 结合公司规模，分析机构投资者的持股情况
-3. 考虑公司业务特点，评估大宗交易的影响
-4. 根据公司市场地位，识别重要股东的动向
+当前时间：{current_datetime.strftime('%Y年%m月%d日 %H:%M:%S')} ({current_datetime.strftime('%A')})
+
 
 """
             
