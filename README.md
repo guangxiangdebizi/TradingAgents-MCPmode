@@ -264,35 +264,6 @@ VERBOSE_LOGGING=true
 python main.py
 ```
 
-#### 单次分析模式
-
-```bash
-# 分析苹果股票
-python main.py -c AAPL
-
-# 分析苹果股票（自然语言）
-python main.py -c "苹果公司股票分析"
-
-# 分析A股
-python main.py -c "平安银行"
-
-# 分析港股
-python main.py -c "腾讯控股"
-```
-
-#### 报告格式选择
-
-系统支持多种报告格式导出：
-
-- **1**: HTML格式 (默认)
-- **2**: Word格式 (.docx)
-- **3**: Markdown格式 (.md)
-- **4**: PDF格式 (.pdf)
-- **5**: 全部格式
-
-在交互模式下，系统会提示您选择报告格式。单次分析模式默认生成HTML格式报告。
-
-**注意**: 现在支持自然语言查询，您可以直接输入"苹果公司"、"腾讯控股"等，系统会自动识别股票和市场类型。
 
 #### 调试模式
 
@@ -324,20 +295,6 @@ python main.py --debug --log-file analysis.log
 💡 输入 'help' 查看帮助信息
 ============================================================
 
-----------------------------------------
-📈 请输入股票代码或公司名称 (或 'quit' 退出): AAPL
-
-📄 请选择报告格式:
-1. HTML格式
-2. Word格式
-3. Markdown格式
-4. PDF格式
-5. 全部格式
-请输入选择 (1-5, 默认1): 4
-
-🔄 开始分析 AAPL...
-📄 将生成PDF格式报告...
-```
 
 ### 分析结果示例
 
@@ -429,96 +386,101 @@ P/E比率为28.5，略高于行业平均水平。营收增长稳定，现金流�
 
 ## 📊 报告导出功能
 
-系统提供了强大的报告导出功能，支持将JSON分析数据转换为多种格式的美观报告。
+系统提供了强大的报告导出功能，支持将JSON分析数据转换为多种格式的美观报告。采用JSON→Markdown→PDF/DOCX的统一转换流程，确保内容完整性和格式美观。
 
 ### 🎨 支持的导出格式
 
 1. **Markdown (*.md)** - 轻量级标记语言格式
    - 总是可用，无需额外依赖
-   - 支持代码块、表格、链接等
-   - 表情符号正常显示
+   - 支持标题、列表、表格、代码块等
+   - 表情符号完美显示
 
 2. **PDF (*.pdf)** - 便携文档格式
-   - 需要安装: `pip install reportlab markdown2`
    - 专业排版，适合打印和分享
    - 中文字体支持（微软雅黑）
    - 表情符号使用 Segoe UI Emoji 字体
+   - A4页面，自动分页
 
 3. **DOCX (*.docx)** - Microsoft Word文档
-   - 需要安装: `pip install python-docx`
    - 完全兼容 Microsoft Word
-   - 支持字体、样式、格式
-   - 表情符号使用 Segoe UI Emoji 字体
+   - 丰富的字体和样式支持
+   - 表情符号原生支持
+   - 标准Word格式
 
-### 🚀 使用导出工具
+### 🚀 使用方法
 
-#### 推荐的导出流程
+#### 🎯 推荐使用流程
 
 ```bash
-# 第一步：转换为Markdown格式
-python -m src.dumptools.json_to_markdown --latest
-
-# 第二步：从Markdown转换为PDF
-python -m src.dumptools.md2pdf -l -d "src/dump"
-
-# 第二步：从Markdown转换为DOCX
-python -m src.dumptools.md2docx -l -d "src/dump"
-
-# 一次性转换所有文件
-python -m src.dumptools.md2pdf -a -d "src/dump"
-python -m src.dumptools.md2docx -a -d "src/dump"
-```
-
-<details>
-<summary><strong>🔧 单独使用各转换器</strong></summary>
-
-**推荐方法（Windows兼容）**：
-```bash
-# 进入dumptools目录
+# 第一步：进入导出工具目录
 cd src/dumptools
 
-# Markdown转换器
+# 第二步：JSON转换为Markdown（必需）
 python json_to_markdown.py -d "../dump" --latest
+
+# 第三步：Markdown转换为目标格式
+python md2pdf.py -l -d "../dump"     # 生成PDF
+python md2docx.py -l -d "../dump"    # 生成DOCX
+```
+
+#### 📋 命令行参数说明
+
+**JSON to Markdown 转换器 (`json_to_markdown.py`)：**
+```bash
+# 转换最新的JSON文件
+python json_to_markdown.py -d "../dump" --latest
+
+# 转换所有JSON文件
 python json_to_markdown.py -d "../dump" --all
+
+# 列出所有可用的JSON文件
 python json_to_markdown.py -d "../dump" --list
 
-
-
-# 通过Markdown中间步骤转换（推荐，内容完整性更好）
-python md2pdf.py -l -d "../dump"   # JSON→Markdown→PDF
-python md2pdf.py -a -d "../dump"   # 批量转换所有文件
-
-python md2docx.py -l -d "../dump"  # JSON→Markdown→DOCX
-python md2docx.py -a -d "../dump"  # 批量转换所有文件
-
-# md2pdf.py支持的Markdown元素：
-# - 标题（# ## ###）
-# - 粗体文本（**文本**）
-# - 引用（> 文本）
-# - 列表（- 项目）
-# - 代码块（```代码```）
-# - 表格（|列1|列2|）
-# - Emoji表情符号
-
-# md2docx.py支持的Markdown元素：
-# - 标题（# ## ###）
-# - 粗体文本（**文本**）
-# - 引用（> 文本）
-# - 列表（- 项目）
-# - 代码块（```代码```）
-# - 表格（|列1|列2|）
-# - Emoji表情符号（原生支持）
+# 转换指定文件
+python json_to_markdown.py -d "../dump" --file ../dump/session_20250805_132307.json
 ```
 
-**备选方法（需要完整依赖）**：
+**Markdown to PDF 转换器 (`md2pdf.py`)：**
 ```bash
-# 如果已安装所有依赖，可使用模块方式
-python -m src.dumptools.json_to_markdown --latest
-python -m src.dumptools.md2pdf -l -d "src/dump"
-python -m src.dumptools.md2docx -l -d "src/dump"
+# 转换最新的JSON文件（自动调用Markdown转换）
+python md2pdf.py -l -d "../dump"
+
+# 批量转换所有JSON文件
+python md2pdf.py -a -d "../dump"
+
+# 转换指定JSON文件
+python md2pdf.py -f "../dump/session_20250805_132307.json" -d "../dump"
 ```
 
-</details>
+**Markdown to DOCX 转换器 (`md2docx.py`)：**
+```bash
+# 转换最新的JSON文件（自动调用Markdown转换）
+python md2docx.py -l -d "../dump"
+
+# 批量转换所有JSON文件
+python md2docx.py -a -d "../dump"
+
+# 转换指定JSON文件
+python md2docx.py -f "../dump/session_20250805_132307.json" -d "../dump"
+```
+
+#### 💡 快速转换示例
+
+**转换最新分析报告：**
+```bash
+cd src/dumptools
+python json_to_markdown.py -d "../dump" --latest
+python md2pdf.py -l -d "../dump"
+python md2docx.py -l -d "../dump"
+```
+
+**批量转换所有报告：**
+```bash
+cd src/dumptools
+python json_to_markdown.py -d "../dump" --all
+python md2pdf.py -a -d "../dump"
+python md2docx.py -a -d "../dump"
+```
 
 ### 📁 输出目录结构
 
@@ -529,187 +491,101 @@ TradingAgents-MCPmode/
 └── src/
     └── dumptools/
         ├── markdown_reports/          # Markdown报告目录
-        │   ├── session_20250730_104218.md
-        │   └── session_20250730_112128.md
+        │   ├── session_20250805_132307.md
+        │   └── session_20250805_150001.md
         ├── pdf_reports/              # PDF报告目录
-        │   ├── session_20250730_104218.pdf
-        │   └── session_20250730_112128.pdf
+        │   ├── session_20250805_132307.pdf
+        │   └── session_20250805_150001.pdf
         └── docx_reports/             # DOCX报告目录
-            ├── session_20250730_104218.docx
-            └── session_20250730_112128.docx
+            ├── session_20250805_132307.docx
+            └── session_20250805_150001.docx
 ```
 
-### 🔄 导出流程架构
+### 🔄 转换流程架构
 
-系统采用灵活的导出架构，针对不同格式优化生成流程：
+系统采用三步转换流程，确保内容完整性和格式兼容性：
 
-#### Markdown导出
 ```
-JSON数据 → Markdown格式
-```
-
-#### PDF导出
-```
-JSON数据 → Markdown → PDF（推荐）
+第一步：JSON → Markdown
+        ↓
+第二步：Markdown → PDF
+        ↓  
+第三步：Markdown → DOCX
 ```
 
-#### DOCX导出
-```
-JSON数据 → Markdown → DOCX（推荐）
-```
-
-#### 流程说明
-1. **Markdown转换**：解析JSON数据结构，生成结构化Markdown文档
-2. **PDF转换**：先转为Markdown，再使用md2pdf.py转换，确保内容完整性
-3. **DOCX转换**：先转为Markdown，再使用md2docx.py转换，确保内容完整性
-
-#### 转换方式优势
-
-**Markdown→PDF/DOCX转换方式**：
-- ✅ 内容完整性最佳，不会截断长内容
-- ✅ 基于成熟的Markdown格式，稳定性更好
-- ✅ 支持完整的分析报告内容
-- ✅ 模块化设计，易于维护
-
-#### 优势
-- **内容完整**：确保所有分析内容都被保留
-- **格式优化**：每种格式都有专门优化的样式和布局
-- **稳定性**：减少依赖链，提高转换成功率
-- **扩展性**：模块化设计，易于添加新格式
-- **质量保证**：每种格式都有独立的内容验证和格式化标准
+**流程优势：**
+- ✅ **内容完整性**：保证所有分析数据都被正确转换
+- ✅ **格式标准化**：基于Markdown统一中间格式
+- ✅ **高稳定性**：减少转换错误和数据丢失
+- ✅ **模块化设计**：易于维护和扩展
 
 ### 🎨 报告样式特性
 
-<details>
-<summary><strong>📝 Markdown格式</strong></summary>
-
-- 使用标准Markdown语法
-- 支持表情符号
-- 代码块高亮
+**📝 Markdown格式：**
+- 标准Markdown语法
 - 清晰的层级结构
+- 支持表情符号和特殊字符
+- 兼容所有Markdown阅读器
 
-</details>
+**📄 PDF格式：**
+- 字体：中文使用微软雅黑，英文使用Helvetica，代码使用Courier
+- 页面：A4大小，72pt页边距
+- 样式：标题居中加粗，正文两端对齐
+- 表情：Segoe UI Emoji字体支持
 
-<details>
-<summary><strong>📄 PDF格式</strong></summary>
-
-**字体配置**:
-- 中文内容：微软雅黑 (Microsoft YaHei)
-- 英文内容：Helvetica
-- 代码内容：Courier
-- 表情符号：Segoe UI Emoji
-
-**页面设置**:
-- 页面大小：A4
-- 页边距：72pt
-- 自动分页
-
-**样式层级**:
-- 标题：20pt，居中，加粗
-- 一级标题：16pt，加粗
-- 二级标题：14pt，加粗
-- 正文：11pt，两端对齐
-- 代码：9pt，等宽字体
-
-</details>
-
-<details>
-<summary><strong>📃 DOCX格式</strong></summary>
-
-**字体配置**:
-- 中文内容：微软雅黑 (Microsoft YaHei)
-- 代码内容：Consolas
-- 表情符号：Segoe UI Emoji
-
-**格式特性**:
-- 标题居中，加粗
-- 段落间距适中
-- 代码块缩进
-- 完全兼容Microsoft Word
-
-</details>
+**📃 DOCX格式：**
+- 字体：中文使用微软雅黑，代码使用Consolas
+- 格式：标题居中，段落适中间距
+- 兼容：完全兼容Microsoft Word
+- 表情：原生表情符号支持
 
 ### 🔧 依赖安装
 
-<details>
-<summary><strong>📦 一键安装（推荐）</strong></summary>
-
 ```bash
-# 安装所有项目依赖（包括导出工具）
+# 安装所有必需依赖
+pip install reportlab python-docx
+
+# 或安装完整项目依赖
 pip install -r requirements.txt
 ```
 
-</details>
-
-<details>
-<summary><strong>⚙️ 仅安装导出工具依赖</strong></summary>
-
-```bash
-# 核心导出依赖（必需）
-pip install markdown2 python-docx reportlab
-
-# 可选依赖（如果需要使用统一导出工具）
-pip install weasyprint  # 可选，仅统一导出工具需要
-```
-
-**依赖说明**：
-- **markdown2**: Markdown格式生成（核心依赖）
-- **python-docx**: DOCX格式生成（核心依赖）
-- **reportlab**: PDF格式生成（核心依赖，已重构为直接生成）
-- **weasyprint**: 仅统一导出工具需要，单独使用PDF转换器不需要
-
-**重要更新**：
-- ✅ **简化架构**：采用 JSON→Markdown→PDF/DOCX 的统一流程
-- ✅ **更好的兼容性**：基于成熟的Markdown格式，稳定性更高
-- ✅ **智能字体支持**：自动注册中文字体，支持表情符号显示
-
-</details>
+**依赖说明：**
+- `reportlab`：PDF生成库
+- `python-docx`：DOCX生成库
+- 无需额外依赖即可生成Markdown
 
 ### ⚠️ 注意事项
 
-1. **字体支持**：确保系统已安装微软雅黑和Segoe UI Emoji字体
-2. **文件权限**：确保输出目录有写入权限
-3. **内容长度**：超长内容会被自动截断以保证文档质量
-4. **特殊字符**：表情符号和特殊字符使用专门字体以确保正确显示
+1. **系统要求**：确保系统已安装微软雅黑和Segoe UI Emoji字体
+2. **文件权限**：确保对输出目录有写入权限
+3. **路径规范**：建议在`src/dumptools`目录下执行命令
+4. **编码支持**：所有文件使用UTF-8编码，支持中文和特殊字符
 
-### 🔧 故障排除
+### 🔍 故障排除
 
-<details>
-<summary><strong>⚠️ 导出工具常见问题</strong></summary>
-
-**问题1：转换器使用**
-
-✅ **推荐流程**：使用 Markdown 作为中间格式的转换方式。
+**常见问题解决：**
 
 ```bash
-# 推荐的转换流程
-cd src/dumptools
-# 第一步：JSON转Markdown
-python json_to_markdown.py -d "../dump" --latest
-# 第二步：Markdown转PDF/DOCX
-python md2pdf.py -l -d "../dump"
-python md2docx.py -l -d "../dump"
-```
+# 检查依赖是否正确安装
+python -c "import reportlab; print('✅ reportlab已安装')"
+python -c "import docx; print('✅ python-docx已安装')"
 
-</details>
-
-<details>
-<summary><strong>🔍 依赖检查工具</strong></summary>
-
-```bash
-# 检查核心导出依赖（必需）
-python -c "import markdown2; print('✅ markdown2 - Markdown转换器需要')"
-python -c "import docx; print('✅ python-docx - DOCX转换器需要')"
-python -c "import reportlab; print('✅ reportlab - PDF转换器需要')"
-
-# 快速测试转换器
+# 测试转换器功能
 cd src/dumptools
 python json_to_markdown.py --help
 python md2pdf.py --help
 python md2docx.py --help
+
+# 检查字体支持（Windows）
+ls C:/Windows/Fonts/msyh.ttc    # 微软雅黑
+ls C:/Windows/Fonts/seguiemj.ttf # Segoe UI Emoji
 ```
 
-</details>
+**如果转换失败：**
+1. 确认JSON文件存在且格式正确
+2. 检查文件权限和目录访问权限
+3. 确认所有依赖包已正确安装
+4. 查看命令行错误输出以定位具体问题
 
 ## 🔧 开发指南
 
