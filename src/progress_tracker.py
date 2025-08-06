@@ -65,7 +65,7 @@ class ProgressTracker:
         if description:
             print(f"   描述: {description}")
     
-    def start_agent(self, agent_name: str, action: str = ""):
+    def start_agent(self, agent_name: str, action: str = "", system_prompt: str = "", user_prompt: str = "", context: str = ""):
         """开始智能体工作"""
         self.current_agent = agent_name
         agent_data = {
@@ -73,7 +73,10 @@ class ProgressTracker:
             "action": action,
             "start_time": datetime.now().isoformat(),
             "status": "running",
-            "result": ""
+            "result": "",
+            "system_prompt": system_prompt,
+            "user_prompt": user_prompt, 
+            "context": context
         }
         self.session_data["agents"].append(agent_data)
         self._save_json()

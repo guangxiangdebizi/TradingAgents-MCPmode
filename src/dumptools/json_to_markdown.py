@@ -81,6 +81,29 @@ class JSONToMarkdownConverter:
         
         return '\n'.join(normalized_lines)
     
+    def _get_agent_mcp_calls(self, agent_name: str, mcp_calls: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        """获取指定agent的MCP调用记录"""
+        return [call for call in mcp_calls if call.get('agent_name') == agent_name]
+    
+    def _generate_mcp_calls_section(self, agent_name: str, mcp_calls: List[Dict[str, Any]]) -> str:
+        """生成指定agent的MCP调用信息"""
+        lines = []
+        if mcp_calls:
+            lines.append(f"#### 🔧 MCP工具调用 (共{len(mcp_calls)}次)")
+            lines.append("")
+            for i, call in enumerate(mcp_calls, 1):
+                lines.append(f"**调用 {i}**:")
+                tool_name = call.get('tool_name', 'N/A')
+                timestamp = call.get('timestamp', 'N/A')
+                lines.append(f"- 工具: {tool_name}")
+                lines.append(f"- 时间: {timestamp}")
+                if call.get('tool_result'):
+                    lines.append(f"- 结果: {call['tool_result'][:100]}..." if len(call.get('tool_result', '')) > 100 else f"- 结果: {call.get('tool_result', '')}")
+                lines.append("")
+            lines.append("---")
+            lines.append("")
+        return '\n'.join(lines)
+    
     def _generate_markdown(self, data: Dict[str, Any]) -> str:
         """生成Markdown内容"""
         md_lines = []
@@ -115,11 +138,15 @@ class JSONToMarkdownConverter:
                 md_lines.append("## 📊 分析结果")
                 md_lines.append("")
                 
+                # 获取MCP调用数据
+                mcp_calls = data.get('mcp_calls', [])
+                
                 for agent in completed_agents:
                     agent_name = agent.get('agent_name', 'Unknown Agent')
                     
                     # 根据智能体类型设置更好的标题
                     title_mapping = {
+                        'company_overview_analyst': '🏢 公司概述分析',
                         'market_analyst': '📈 市场技术分析',
                         'sentiment_analyst': '💭 市场情绪分析', 
                         'news_analyst': '📰 新闻信息分析',
@@ -132,6 +159,12 @@ class JSONToMarkdownConverter:
                     section_title = title_mapping.get(agent_name, f"📊 {agent_name}")
                     md_lines.append(f"### {section_title}")
                     md_lines.append("")
+                    
+                    # 显示该agent的MCP调用信息
+                    agent_mcp_calls = self._get_agent_mcp_calls(agent_name, mcp_calls)
+                    if agent_mcp_calls:
+                        mcp_section = self._generate_mcp_calls_section(agent_name, agent_mcp_calls)
+                        md_lines.append(mcp_section)
                     
                     # 处理并导出分析结果，标准化标题格式
                     if agent.get('result'):
@@ -151,18 +184,7 @@ class JSONToMarkdownConverter:
                 md_lines.append(f"**内容**: {stage}")
                 md_lines.append("")
         
-        # MCP调用情况
-        if 'mcp_calls' in data and data['mcp_calls']:
-            md_lines.append("## 🔧 MCP工具调用")
-            md_lines.append("")
-            for i, call in enumerate(data['mcp_calls'], 1):
-                md_lines.append(f"### 调用 {i}")
-                md_lines.append("")
-                md_lines.append(f"**工具**: {call.get('tool', 'N/A')}")
-                md_lines.append(f"**时间**: {call.get('timestamp', 'N/A')}")
-                if call.get('result'):
-                    md_lines.append(f"**结果**: {call['result']}")
-                md_lines.append("")
+
         
         # 错误信息
         if 'errors' in data and data['errors']:

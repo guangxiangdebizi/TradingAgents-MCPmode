@@ -172,10 +172,7 @@ class WorkflowOrchestrator:
         """公司概述分析师节点"""
         print("🏢 第0阶段：公司概述分析师")
         
-        # 记录智能体开始工作
-        if self.progress_manager:
-            self.progress_manager.start_agent("company_overview_analyst", "公司基础信息收集")
-        
+        # 不再在这里调用start_agent，让BaseAgent自己处理
         result = await self.agents["company_overview_analyst"].process(state, self.progress_manager)
         
         return result
@@ -184,10 +181,7 @@ class WorkflowOrchestrator:
         """市场分析师节点"""
         print("🔍 第1阶段：市场分析师")
         
-        # 记录智能体开始工作
-        if self.progress_manager:
-            self.progress_manager.start_agent("market_analyst", "市场技术分析")
-        
+        # 不再在这里调用start_agent，让BaseAgent自己处理
         result = await self.agents["market_analyst"].process(state, self.progress_manager)
         
         return result
@@ -196,9 +190,7 @@ class WorkflowOrchestrator:
         """情绪分析师节点"""
         print("😊 情绪分析师")
         
-        # 记录智能体开始工作
-        if self.progress_manager:
-            self.progress_manager.start_agent("sentiment_analyst", "市场情绪分析")
+        # 不再在这里调用start_agent，让BaseAgent自己处理
         
         result = await self.agents["sentiment_analyst"].process(state, self.progress_manager)
         
@@ -208,9 +200,7 @@ class WorkflowOrchestrator:
         """新闻分析师节点"""
         print("📰 新闻分析师")
         
-        # 记录智能体开始工作
-        if self.progress_manager:
-            self.progress_manager.start_agent("news_analyst", "新闻信息分析")
+        # 不再在这里调用start_agent，让BaseAgent自己处理
         
         result = await self.agents["news_analyst"].process(state, self.progress_manager)
         
@@ -220,9 +210,7 @@ class WorkflowOrchestrator:
         """基本面分析师节点"""
         print("📊 基本面分析师")
         
-        # 记录智能体开始工作
-        if self.progress_manager:
-            self.progress_manager.start_agent("fundamentals_analyst", "基本面分析")
+        # 不再在这里调用start_agent，让BaseAgent自己处理
         
         result = await self.agents["fundamentals_analyst"].process(state, self.progress_manager)
         
@@ -232,9 +220,7 @@ class WorkflowOrchestrator:
         """股东分析师节点"""
         print("👥 股东分析师")
         
-        # 记录智能体开始工作
-        if self.progress_manager:
-            self.progress_manager.start_agent("shareholder_analyst", "主要股东和机构持股分析")
+        # 不再在这里调用start_agent，让BaseAgent自己处理
         
         result = await self.agents["shareholder_analyst"].process(state, self.progress_manager)
         
@@ -244,9 +230,7 @@ class WorkflowOrchestrator:
         """产品分析师节点"""
         print("🏭 产品分析师")
         
-        # 记录智能体开始工作
-        if self.progress_manager:
-            self.progress_manager.start_agent("product_analyst", "公司主营业务和产品分析")
+        # 不再在这里调用start_agent，让BaseAgent自己处理
         
         result = await self.agents["product_analyst"].process(state, self.progress_manager)
         

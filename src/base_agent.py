@@ -155,31 +155,55 @@ class BaseAgent(ABC):
             # 确保智能体实例已创建
             self.ensure_agent_created()
             
-            # 记录开始执行
+            # 记录开始执行（只在没有已存在的running状态agent时才记录）
             if progress_tracker:
-                if hasattr(progress_tracker, 'start_agent'):
-                    # 新的ProgressManager接口
-                    progress_tracker.start_agent(self.agent_name, f"分析: {user_message}")
-                elif hasattr(progress_tracker, 'log_agent_start'):
-                    # 旧的ProgressTracker接口（兼容性）
-                    progress_tracker.log_agent_start(self.agent_name, {
-                        "user_message_length": len(user_message),
-                        "mcp_enabled": self.mcp_enabled,
-                        "available_tools_count": len(self.available_tools) if self.available_tools else 0
-                    })
+                # 检查是否已经有正在运行的同名agent
+                should_start_new = True
+                if hasattr(progress_tracker, 'session_data'):
+                    for agent in progress_tracker.session_data.get("agents", []):
+                        if agent.get("agent_name") == self.agent_name and agent.get("status") == "running":
+                            should_start_new = False
+                            break
+                
+                if should_start_new:
+                    if hasattr(progress_tracker, 'start_agent'):
+                        # 构建系统提示和上下文信息
+                        system_prompt = self.get_system_prompt(state)
+                        is_analyst = self.agent_name.endswith('_analyst')
+                        if is_analyst:
+                            context_prompt = self.build_analyst_context_prompt(state)
+                        else:
+                            context_prompt = self.build_context_prompt(state)
+                        
+                        # 新的ProgressManager接口
+                        progress_tracker.start_agent(
+                            agent_name=self.agent_name, 
+                            action=f"分析: {user_message}",
+                            system_prompt=system_prompt,
+                            user_prompt=user_message,
+                            context=context_prompt
+                        )
+                    elif hasattr(progress_tracker, 'log_agent_start'):
+                        # 旧的ProgressTracker接口（兼容性）
+                        progress_tracker.log_agent_start(self.agent_name, {
+                            "user_message_length": len(user_message),
+                            "mcp_enabled": self.mcp_enabled,
+                            "available_tools_count": len(self.available_tools) if self.available_tools else 0
+                        })
             
             # 开始分析
             print(f"🤖 [{self.agent_name}] 开始分析...")
 
-            # 构建系统提示和上下文（不包含工具描述，因为智能体已经预先绑定了工具）
-            system_prompt = self.get_system_prompt(state)
-            
-            # 检查是否是分析师，如果是则使用专门的分析师上下文
-            is_analyst = self.agent_name.endswith('_analyst')
-            if is_analyst:
-                context_prompt = self.build_analyst_context_prompt(state)
-            else:
-                context_prompt = self.build_context_prompt(state)
+            # 构建系统提示和上下文（如果之前没有构建的话）
+            if 'system_prompt' not in locals():
+                system_prompt = self.get_system_prompt(state)
+            if 'context_prompt' not in locals():
+                # 检查是否是分析师，如果是则使用专门的分析师上下文
+                is_analyst = self.agent_name.endswith('_analyst')
+                if is_analyst:
+                    context_prompt = self.build_analyst_context_prompt(state)
+                else:
+                    context_prompt = self.build_context_prompt(state)
             
             # 将系统和上下文组合成一个系统消息
             system_level_prompt = f"""{system_prompt}
