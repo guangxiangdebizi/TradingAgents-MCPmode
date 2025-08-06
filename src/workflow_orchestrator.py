@@ -9,7 +9,7 @@ from .agent_states import AgentState
 from .mcp_manager import MCPManager
 from .progress_tracker import ProgressTracker
 from .agents.analysts import (
-    MarketAnalyst, SentimentAnalyst, NewsAnalyst, FundamentalsAnalyst, ShareholderAnalyst, ProductAnalyst
+    CompanyOverviewAnalyst, MarketAnalyst, SentimentAnalyst, NewsAnalyst, FundamentalsAnalyst, ShareholderAnalyst, ProductAnalyst
 )
 from .agents.researchers import BullResearcher, BearResearcher
 from .agents.managers import ResearchManager, Trader
@@ -49,6 +49,7 @@ class WorkflowOrchestrator:
         """初始化所有智能体"""
         agents = {
             # 分析师团队
+            "company_overview_analyst": CompanyOverviewAnalyst(self.mcp_manager),
             "market_analyst": MarketAnalyst(self.mcp_manager),
             "sentiment_analyst": SentimentAnalyst(self.mcp_manager),
             "news_analyst": NewsAnalyst(self.mcp_manager),
@@ -79,6 +80,7 @@ class WorkflowOrchestrator:
         workflow = StateGraph(AgentState)
         
         # 添加节点
+        workflow.add_node("company_overview_analyst", self._company_overview_analyst_node)
         workflow.add_node("market_analyst", self._market_analyst_node)
         workflow.add_node("sentiment_analyst", self._sentiment_analyst_node)
         workflow.add_node("news_analyst", self._news_analyst_node)
@@ -98,9 +100,12 @@ class WorkflowOrchestrator:
         workflow.add_node("risk_manager", self._risk_manager_node)
         
         # 设置入口点
-        workflow.set_entry_point("market_analyst")
+        workflow.set_entry_point("company_overview_analyst")
         
         # 添加边（定义流程）
+        # 第零阶段：公司概述分析
+        workflow.add_edge("company_overview_analyst", "market_analyst")
+        
         # 第一阶段：分析师并行分析
         workflow.add_edge("market_analyst", "sentiment_analyst")
         workflow.add_edge("sentiment_analyst", "news_analyst")
@@ -163,9 +168,21 @@ class WorkflowOrchestrator:
         return workflow.compile()
     
     # 节点处理函数
+    async def _company_overview_analyst_node(self, state: AgentState) -> AgentState:
+        """公司概述分析师节点"""
+        print("🏢 第0阶段：公司概述分析师")
+        
+        # 记录智能体开始工作
+        if self.progress_manager:
+            self.progress_manager.start_agent("company_overview_analyst", "公司基础信息收集")
+        
+        result = await self.agents["company_overview_analyst"].process(state, self.progress_manager)
+        
+        return result
+
     async def _market_analyst_node(self, state: AgentState) -> AgentState:
         """市场分析师节点"""
-        print("🏢 第1阶段：市场分析师")
+        print("🔍 第1阶段：市场分析师")
         
         # 记录智能体开始工作
         if self.progress_manager:

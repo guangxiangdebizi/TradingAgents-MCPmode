@@ -62,6 +62,7 @@ class BaseAgent(ABC):
             trader_investment_plan = state.get('trader_investment_plan', '')
             
             # 获取报告
+            company_overview_report = state.get('company_overview_report', '')
             market_report = state.get('market_report', '')
             sentiment_report = state.get('sentiment_report', '')
             news_report = state.get('news_report', '')
@@ -70,6 +71,7 @@ class BaseAgent(ABC):
             product_report = state.get('product_report', '')
             
             reports = {
+                "company_overview_report": company_overview_report,
                 "market_report": market_report,
                 "sentiment_report": sentiment_report,
                 "news_report": news_report,
@@ -120,6 +122,31 @@ class BaseAgent(ABC):
         
         return "\n\n".join(context_parts)
     
+    def build_analyst_context_prompt(self, state: AgentState) -> str:
+        """为分析师构建上下文提示词（包含company_details占位符）"""
+        context_parts = []
+        
+        # 添加当前日期时间信息
+        current_datetime = datetime.now()
+        context_parts.append(f"当前日期时间: {current_datetime.strftime('%Y年%m月%d日 %H:%M:%S')} ({current_datetime.strftime('%A')})")
+        
+        # 处理状态可能是字典或AgentState对象的情况
+        if isinstance(state, dict):
+            user_query = state.get('user_query', '')
+            company_details = state.get('company_details', '')
+        else:
+            user_query = state.user_query
+            company_details = state.company_details
+        
+        # 基础信息
+        context_parts.append(f"用户问题: {user_query}")
+        
+        # 公司基础信息（仅供分析师使用）
+        if company_details.strip():
+            context_parts.append(f"公司基础信息: {company_details}")
+        
+        return "\n\n".join(context_parts)
+    
 
     
     async def call_llm_with_context(self, state: AgentState, user_message: str, progress_tracker=None) -> str:
@@ -146,7 +173,13 @@ class BaseAgent(ABC):
 
             # 构建系统提示和上下文（不包含工具描述，因为智能体已经预先绑定了工具）
             system_prompt = self.get_system_prompt(state)
-            context_prompt = self.build_context_prompt(state)
+            
+            # 检查是否是分析师，如果是则使用专门的分析师上下文
+            is_analyst = self.agent_name.endswith('_analyst')
+            if is_analyst:
+                context_prompt = self.build_analyst_context_prompt(state)
+            else:
+                context_prompt = self.build_context_prompt(state)
             
             # 将系统和上下文组合成一个系统消息
             system_level_prompt = f"""{system_prompt}

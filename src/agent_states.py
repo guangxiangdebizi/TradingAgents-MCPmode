@@ -29,8 +29,10 @@ class AgentState(MessagesState):
     
     # 基础信息
     user_query: str = ""  # 用户查询问题
+    company_details: str = ""  # 公司基础信息（供分析师使用的占位符）
     
     # 分析师报告（智能体间传递的核心数据）
+    company_overview_report: str = ""  # 公司概述分析师报告
     market_report: str = ""  # 市场分析师报告
     sentiment_report: str = ""  # 情绪分析师报告
     news_report: str = ""  # 新闻分析师报告
@@ -92,6 +94,7 @@ class AgentState(MessagesState):
     def get_all_reports(self) -> Dict[str, str]:
         """获取所有分析师报告"""
         return {
+            "company_overview_report": self.company_overview_report,
             "market_report": self.market_report,
             "sentiment_report": self.sentiment_report,
             "news_report": self.news_report,

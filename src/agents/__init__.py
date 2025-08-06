@@ -2,6 +2,7 @@
 # 包含所有交易决策智能体的实现
 
 from .analysts import (
+    CompanyOverviewAnalyst,
     MarketAnalyst,
     SentimentAnalyst, 
     NewsAnalyst,
@@ -28,6 +29,7 @@ from .risk_management import (
 
 __all__ = [
     # 分析师
+    'CompanyOverviewAnalyst',
     'MarketAnalyst',
     'SentimentAnalyst',
     'NewsAnalyst', 
