@@ -8,12 +8,20 @@ Markdown to PDF Converter
 import os
 import sys
 from pathlib import Path
-from typing import Optional, List
+from typing import Optional, List, Tuple
 import argparse
 from datetime import datetime
+import re
+import html
 
 # 导入markdown转换器
-from json_to_markdown import JSONToMarkdownConverter
+try:
+    from .json_to_markdown import JSONToMarkdownConverter
+except ImportError:
+    try:
+        from json_to_markdown import JSONToMarkdownConverter
+    except ImportError:
+        from src.dumptools.json_to_markdown import JSONToMarkdownConverter
 
 try:
     from reportlab.lib.pagesizes import A4
@@ -27,19 +35,6 @@ try:
 except ImportError:
     print("❌ 缺少依赖包，请安装：pip install reportlab")
     sys.exit(1)
-
-import os
-import sys
-from pathlib import Path
-from typing import Optional, List, Tuple
-import argparse
-from datetime import datetime
-import re
-import html
-
-# 导入自定义模块
-from json_to_markdown import JSONToMarkdownConverter
-
 
 class MarkdownToPDFConverter:
     """Markdown转PDF转换器"""
@@ -56,7 +51,6 @@ class MarkdownToPDFConverter:
         self.output_dir.mkdir(exist_ok=True)
         
         # 初始化Markdown转换器
-        from json_to_markdown import JSONToMarkdownConverter
         self.md_converter = JSONToMarkdownConverter(str(self.dump_dir))
         
         # 注册字体

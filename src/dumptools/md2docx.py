@@ -14,7 +14,13 @@ from datetime import datetime
 import re
 
 # 导入markdown转换器
-from json_to_markdown import JSONToMarkdownConverter
+try:
+    from .json_to_markdown import JSONToMarkdownConverter
+except ImportError:
+    try:
+        from json_to_markdown import JSONToMarkdownConverter
+    except ImportError:
+        from src.dumptools.json_to_markdown import JSONToMarkdownConverter
 
 try:
     from docx import Document
@@ -42,7 +48,6 @@ class MarkdownToDocxConverter:
         self.output_dir.mkdir(exist_ok=True)
         
         # 初始化Markdown转换器
-        from json_to_markdown import JSONToMarkdownConverter
         self.md_converter = JSONToMarkdownConverter(str(self.dump_dir))
         
         # 目录项列表
