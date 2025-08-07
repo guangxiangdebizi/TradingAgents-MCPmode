@@ -7,10 +7,22 @@ TradingAgents-MCPmode Web前端
 
 import streamlit as st
 import os
+import sys
 import json
+import asyncio
 from pathlib import Path
 from datetime import datetime
-from typing import Dict, Any
+from typing import Dict, Any, Optional
+from dotenv import load_dotenv
+
+# 添加项目根目录到Python路径
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
+try:
+    from src.workflow_orchestrator import WorkflowOrchestrator
+except ImportError as e:
+    WorkflowOrchestrator = None
+    st.error(f"无法导入WorkflowOrchestrator: {e}")
 
 # 页面配置
 st.set_page_config(
@@ -31,6 +43,14 @@ if "selected_session_file" not in st.session_state:
     st.session_state.selected_session_file = None
 if "current_session_data" not in st.session_state:
     st.session_state.current_session_data = None
+if "analysis_status" not in st.session_state:
+    st.session_state.analysis_status = ""
+if "analysis_progress" not in st.session_state:
+    st.session_state.analysis_progress = 0
+if "analysis_completed" not in st.session_state:
+    st.session_state.analysis_completed = False
+if "analysis_result" not in st.session_state:
+    st.session_state.analysis_result = None
 
 
 def setup_sidebar():
@@ -142,10 +162,15 @@ def show_analysis_page():
     """实时分析页面"""
     st.title("📊 实时分析")
     
+    # 检查WorkflowOrchestrator是否可用
+    if WorkflowOrchestrator is None:
+        st.error("😱 无法加载WorkflowOrchestrator，请检查后端配置")
+        return
+    
     # 分析输入
     query = st.text_area(
         "📝 请输入您的分析查询",
-        placeholder="例如：分析苹果公司(AAPL)的投资价值",
+        placeholder="例如：给我分析一下600833吧\n例如：分析苹果公司(AAPL)的投资价值",
         height=100
     )
     
@@ -154,29 +179,176 @@ def show_analysis_page():
     with col1:
         if st.button("🚀 开始分析", type="primary", disabled=st.session_state.analysis_running):
             if query:
-                st.session_state.analysis_running = True
-                st.success("分析已开始！请查看各智能体页面了解进展。")
-                st.rerun()
+                # 开始分析！这里调用真实的分析功能
+                start_analysis(query)
             else:
                 st.error("请输入分析查询")
     
     with col2:
         if st.button("⏹️ 停止分析", disabled=not st.session_state.analysis_running):
             st.session_state.analysis_running = False
+            st.session_state.analysis_status = "已停止"
             st.info("分析已停止")
             st.rerun()
     
     # 显示分析状态
-    if st.session_state.analysis_running:
+    if st.session_state.analysis_running or st.session_state.analysis_completed:
         st.markdown("---")
         st.markdown("### 📈 分析进度")
         
-        progress_bar = st.progress(0)
-        status_text = st.empty()
+        status = st.session_state.get('analysis_status', '正在初始化...')
+        progress = st.session_state.get('analysis_progress', 0)
         
-        # 模拟进度显示
-        status_text.text("正在初始化智能体...")
-        progress_bar.progress(10)
+        # 显示进度条和状态
+        progress_bar = st.progress(progress / 100.0)
+        st.text(status)
+        
+        # 如果分析完成且有结果
+        if st.session_state.analysis_completed and st.session_state.analysis_result:
+            st.success("✅ 分析完成！")
+            st.info("📊 请在各智能体页面查看详细结果，或者在历史报告页面管理会话。")
+            
+            # 显示一些基本信息
+            if isinstance(st.session_state.analysis_result, dict):
+                result = st.session_state.analysis_result
+                
+                # 显示执行统计
+                mcp_calls = len(result.get('mcp_tool_calls', []))
+                agent_history = result.get('agent_execution_history', [])
+                agent_executions = len(agent_history)
+                mcp_enabled_agents = len([h for h in agent_history if h.get("mcp_used", False)])
+                
+                col1, col2, col3 = st.columns(3)
+                with col1:
+                    st.metric("智能体执行次数", agent_executions)
+                with col2:
+                    st.metric("MCP工具调用", mcp_calls)
+                with col3:
+                    st.metric("启用MCP的智能体", f"{mcp_enabled_agents}/{agent_executions}")
+            
+            # 重置按钮
+            if st.button("🔄 开始新的分析"):
+                reset_analysis_state()
+                st.rerun()
+    
+    # 显示配置状态
+    st.markdown("---")
+    st.markdown("### ⚙️ 系统状态")
+    
+    # 检查配置文件
+    env_file = Path(".env")
+    config_file = Path("mcp_config.json")
+    
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        if env_file.exists():
+            st.success("✅ .env配置文件存在")
+        else:
+            st.error("❌ .env配置文件不存在")
+    
+    with col2:
+        if config_file.exists():
+            st.success("✅ MCP配置文件存在")
+        else:
+            st.error("❌ MCP配置文件不存在")
+
+
+def start_analysis(query: str):
+    """开始分析（使用简单的同步方式）"""
+    # 重置状态
+    st.session_state.analysis_running = True
+    st.session_state.analysis_completed = False
+    st.session_state.analysis_status = "正在初始化..."
+    st.session_state.analysis_progress = 0
+    st.session_state.analysis_result = None
+    
+    # 直接在主线程中运行分析（避免线程问题）
+    run_analysis_sync(query)
+
+
+def run_analysis_sync(query: str):
+    """同步运行分析（简化版）"""
+    try:
+        # 加载环境变量
+        load_dotenv()
+        
+        # 更新状态
+        st.session_state.analysis_status = "正在初始化工作流编排器..."
+        st.session_state.analysis_progress = 10
+        
+        # 使用asyncio.run运行异步函数
+        import asyncio
+        result = asyncio.run(run_single_analysis_async(query))
+        
+        # 分析成功
+        st.session_state.analysis_result = result
+        st.session_state.analysis_completed = True
+        st.session_state.analysis_status = "✅ 分析完成！"
+        st.session_state.analysis_progress = 100
+        st.session_state.analysis_running = False
+        
+        # 显示成功信息
+        st.success("🎉 分析完成！请在各智能体页面查看结果。")
+        st.rerun()
+            
+    except Exception as e:
+        # 分析失败
+        error_msg = str(e)
+        st.session_state.analysis_status = f"❌ 分析错误: {error_msg}"
+        st.session_state.analysis_running = False
+        st.session_state.analysis_completed = False
+        
+        # 显示错误信息
+        st.error(f"分析失败: {error_msg}")
+        st.rerun()
+
+
+async def run_single_analysis_async(user_query: str) -> Optional[dict]:
+    """运行单次分析（完全按照 main.py 的逻辑）"""
+    orchestrator = WorkflowOrchestrator("mcp_config.json")
+    
+    try:
+        # 初始化
+        st.session_state.analysis_status = "正在初始化工作流编排器..."
+        st.session_state.analysis_progress = 10
+        await orchestrator.initialize()
+        
+        # 显示配置信息
+        st.session_state.analysis_status = "正在加载配置信息..."
+        st.session_state.analysis_progress = 20
+        
+        workflow_info = orchestrator.get_workflow_info()
+        enabled_agents = orchestrator.get_enabled_agents()
+        
+        st.session_state.analysis_status = f"启用的智能体: {len(enabled_agents)}个"
+        st.session_state.analysis_progress = 30
+        
+        # 运行分析
+        st.session_state.analysis_status = f"正在分析: {user_query}"
+        st.session_state.analysis_progress = 50
+        
+        result = await orchestrator.run_analysis(user_query)
+        
+        st.session_state.analysis_status = "正在处理结果..."
+        st.session_state.analysis_progress = 90
+        
+        return result
+        
+    except Exception as e:
+        st.session_state.analysis_status = f"分析过程中发生错误: {e}"
+        raise
+    finally:
+        await orchestrator.close()
+
+
+def reset_analysis_state():
+    """重置分析状态"""
+    st.session_state.analysis_running = False
+    st.session_state.analysis_completed = False
+    st.session_state.analysis_status = ""
+    st.session_state.analysis_progress = 0
+    st.session_state.analysis_result = None
 
 
 def show_history_page():
