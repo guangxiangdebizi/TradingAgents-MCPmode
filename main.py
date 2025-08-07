@@ -10,9 +10,6 @@ import sys
 import asyncio
 import argparse
 from typing import Optional
-import glob
-from pathlib import Path
-
 from dotenv import load_dotenv
 
 # 添加项目根目录到Python路径
@@ -189,79 +186,6 @@ async def run_single_analysis(user_query: str, config_file: str):
         
         # 显示结果
         print_analysis_result(result)
-        
-        # 询问报告格式
-        print("\n" + "="*60)
-        print("📊 分析完成，正在生成报告...")
-        report_format = input("📄 选择报告格式 (1: HTML, 2: Word, 3: Markdown, 4: PDF, 5: 全部, Enter: 默认HTML): ").strip()
-        if not report_format:
-            report_format = '1'
-        
-        # 查找最新的JSON文件（所有格式都需要）
-        progress_logs_dir = Path("progress_logs")
-        latest_json = None
-        if progress_logs_dir.exists():
-            json_files = list(progress_logs_dir.glob("session_*.json"))
-            if json_files:
-                latest_json = max(json_files, key=lambda f: f.stat().st_mtime)
-        
-        if report_format in ['1', '5']:
-            print("\n🔄 正在生成HTML分析报告...")
-            html_file = auto_convert_latest_json_to_html()
-            if html_file:
-                print("🎉 HTML分析报告生成完成！")
-            else:
-                print("❌ HTML报告生成失败")
-        
-        if report_format in ['2', '5']:
-            print("\n🔄 正在生成Word分析报告...")
-            try:
-                if latest_json:
-                    word_file = create_word_report(str(latest_json))
-                    if word_file:
-                        print(f"🎉 Word分析报告生成完成: {word_file}")
-                    else:
-                        print("❌ Word报告生成失败")
-                else:
-                    print("📄 未找到分析报告JSON文件")
-            except Exception as e:
-                print(f"❌ Word报告生成失败: {e}")
-        
-        if report_format in ['3', '5']:
-            print("\n🔄 正在生成Markdown分析报告...")
-            try:
-                if latest_json:
-                    md_file = create_markdown_report(str(latest_json))
-                    if md_file:
-                        print(f"🎉 Markdown分析报告生成完成: {md_file}")
-                    else:
-                        print("❌ Markdown报告生成失败")
-                else:
-                    print("📄 未找到分析报告JSON文件")
-            except Exception as e:
-                print(f"❌ Markdown报告生成失败: {e}")
-        
-        if report_format in ['4', '5']:
-            print("\n🔄 正在生成PDF分析报告...")
-            try:
-                if latest_json:
-                    # 首先生成Markdown文件
-                    md_file = create_markdown_report(str(latest_json))
-                    if md_file:
-                        # 然后将Markdown转换为PDF
-                        converter = MarkdownToPDFConverter()
-                        pdf_file = converter.convert_to_pdf(md_file)
-                        if pdf_file:
-                            print(f"🎉 PDF分析报告生成完成: {pdf_file}")
-                        else:
-                            print("❌ PDF报告生成失败")
-                    else:
-                        print("❌ 无法生成Markdown文件，PDF转换失败")
-                else:
-                    print("📄 未找到分析报告JSON文件")
-            except Exception as e:
-                print(f"❌ PDF报告生成失败: {e}")
-        print("="*60)
         
         return result
         
