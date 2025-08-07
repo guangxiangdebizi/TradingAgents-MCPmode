@@ -59,7 +59,7 @@ def create_header_html():
     """创建专业的顶部抬头HTML"""
     header_html = """
     <div class="header-container animate-fade-in">
-        <div class="header-lab">🏛️ 国金证券人工智能实验室</div>
+        <div class="header-lab">🏛️ 人工智能实验室</div>
         <h1 class="header-title">TradingAgents-MCPmode</h1>
         <p class="header-subtitle">基于MCP工具的多智能体交易分析系统</p>
     </div>

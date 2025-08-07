@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 """
 TradingAgents-MCPmode Web前端
-国金证券人工智能实验室 - 专业一体化交易分析平台
+人工智能实验室 - 专业一体化交易分析平台
 """
 
 import streamlit as st
@@ -51,7 +51,7 @@ except ImportError as e:
 
 # 页面配置
 st.set_page_config(
-    page_title="国金证券AI实验室 - TradingAgents",
+    page_title="AI实验室 - TradingAgents",
     page_icon="🏛️",
     layout="wide",
     initial_sidebar_state="collapsed"
@@ -631,7 +631,7 @@ def main():
     
     status_html = f"""
     <div style="text-align: center; color: var(--text-muted); font-size: 0.9rem; margin-top: 2rem;">
-        <p>系统状态: 环境配置 {env_status} | MCP配置 {mcp_status} | 🏛️ 国金证券人工智能实验室</p>
+        <p>系统状态: 环境配置 {env_status} | MCP配置 {mcp_status} | 🏛️ 人工智能实验室</p>
     </div>
     """
     
