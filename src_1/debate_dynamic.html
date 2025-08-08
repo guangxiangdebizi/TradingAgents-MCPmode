@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>智能体协同分析报告</title>
+    <link rel="stylesheet" href="../styles.css">
+</head>
+<body>
+    <!-- 顶部导航栏 -->
+    <header class="top-nav">
+        <div class="nav-container">
+            <div class="nav-left">
+                <span class="nav-icon">🔬</span>
+                <span class="nav-title">人工智能实验室</span>
+            </div>
+            <div class="nav-right">
+                <select id="sessionSelector" title="选择分析会话">
+                    <option value="">选择分析会话...</option>
+                </select>
+                <button class="nav-btn" onclick="loadSessions()">刷新</button>
+            </div>
+        </div>
+    </header>
+
+    <div class="main-container">
+        <!-- 报告标题区 -->
+        <div class="title-section">
+            <h1 class="main-title">智能体协同分析报告</h1>
+            <p class="subtitle">人工智能实验室智能分析Agent协同分析</p>
+        </div>
+
+        <!-- 专家投票结果卡片 -->
+        <div class="vote-card" id="voteCard">
+            <div class="vote-header">
+                <h3>📊 专家投票结果</h3>
+            </div>
+            <div class="vote-content">
+                <div class="vote-stats">
+                    <div class="bullish">
+                        <span class="vote-number" id="bullCount">5</span>
+                        <span class="vote-label">看涨 Bullish</span>
+                    </div>
+                    <div class="bearish">
+                        <span class="vote-number" id="bearCount">1</span>
+                        <span class="vote-label">看跌 Bearish</span>
+                    </div>
+                </div>
+                <div class="vote-bar">
+                    <div class="bar-bullish" id="bullBar">83.3%</div>
+                    <div class="bar-bearish" id="bearBar">16.7%</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 专家分析详情 -->
+        <div class="analysis-section">
+            <h2 class="section-title">📋 专家分析详情</h2>
+            <div class="analysis-grid" id="analysisGrid">
+                <!-- 动态生成的分析卡片将在这里显示 -->
+            </div>
+        </div>
+
+        <!-- 专家辩论过程 -->
+        <div class="debate-section">
+            <h2 class="section-title">🗣️ 专家辩论过程</h2>
+            <p class="section-subtitle">AI智能体协同分析过程实时记录</p>
+            <div class="timeline" id="timeline">
+                <!-- 动态生成的时间轴项目将在这里显示 -->
+            </div>
+        </div>
+
+        <!-- 免责声明 -->
+        <div class="disclaimer">
+            <h3>⚠️ 免责声明</h3>
+            <p>本报告由人工智能系统生成，仅供参考，不构成投资建议。投资有风险，入市需谨慎。</p>
+        </div>
+    </div>
+
+    <script>
+        // 智能体信息映射
+        const agentMapping = {
+            'company_overview_analyst': { name: '公司概述分析师', emoji: '🏢' },
+            'market_analyst': { name: '市场分析师', emoji: '📈' },
+            'sentiment_analyst': { name: '情绪分析师', emoji: '😊' },
+            'news_analyst': { name: '新闻分析师', emoji: '📰' },
+            'fundamentals_analyst': { name: '基本面分析师', emoji: '📋' },
+            'shareholder_analyst': { name: '股东分析师', emoji: '👥' },
+            'product_analyst': { name: '产品分析师', emoji: '🏭' },
+            'bull_researcher': { name: '看涨研究员', emoji: '🐂' },
+            'bear_researcher': { name: '看跌研究员', emoji: '🐻' },
+            'research_manager': { name: '研究经理', emoji: '👔' },
+            'trader': { name: '交易员', emoji: '💼' },
+            'aggressive_risk_analyst': { name: '激进风险分析师', emoji: '⚡' },
+            'safe_risk_analyst': { name: '保守风险分析师', emoji: '🛡️' },
+            'neutral_risk_analyst': { name: '中性风险分析师', emoji: '⚖️' },
+            'risk_manager': { name: '风险经理', emoji: '🎯' }
+        };
+
+        // 获取智能体信息
+        function getAgentInfo(agentName) {
+            return agentMapping[agentName] || { name: agentName, emoji: '🤖' };
+        }
+
+        // 加载会话列表
+        function loadSessions() {
+            // 从服务器获取会话列表
+            fetch('/api/sessions')
+                .then(response => response.json())
+                .then(sessions => {
+                    const selector = document.getElementById('sessionSelector');
+                    selector.innerHTML = '<option value="">选择分析会话...</option>';
+                    
+                    sessions.forEach(session => {
+                        const option = document.createElement('option');
+                        option.value = session.file;
+                        option.textContent = session.name;
+                        selector.appendChild(option);
+                    });
+                })
+                .catch(error => {
+                    console.error('加载会话列表失败:', error);
+                    // 如果API失败，使用本地文件列表作为备选
+                    loadLocalSessions();
+                });
+        }
+        
+        // 备选：加载本地会话列表
+        function loadLocalSessions() {
+            const mockSessions = [
+                { file: 'session_20250808_142740.json', name: '2025-08-08 14:27 - 陕西煤业分析' },
+                { file: 'session_20250807_103022.json', name: '2025-08-07 10:30 - 市场分析' },
+                { file: 'session_20250806_155510.json', name: '2025-08-06 15:55 - 风险评估' }
+            ];
+            
+            const selector = document.getElementById('sessionSelector');
+            selector.innerHTML = '<option value="">选择分析会话...</option>';
+            
+            mockSessions.forEach(session => {
+                const option = document.createElement('option');
+                option.value = session.file;
+                option.textContent = session.name;
+                selector.appendChild(option);
+            });
+        }
+
+        // 统计投票结果
+        function calculateVoteStats(agents) {
+            let bullish = 0;
+            let bearish = 0;
+            
+            agents.forEach(agent => {
+                const agentName = agent.agent_name.toLowerCase();
+                const result = (agent.result || '').toLowerCase();
+                
+                // 根据智能体名称判断倾向
+                if (agentName.includes('bull')) {
+                    bullish++;
+                } else if (agentName.includes('bear')) {
+                    bearish++;
+                } else if (agentName.includes('risk')) {
+                    bearish++; // 风险分析师归类为谨慎/看跌
+                } else {
+                    // 根据结果内容判断倾向
+                    const bullishKeywords = ['看涨', '买入', '持有', '推荐', '积极', '乐观', '增长', '上涨', '建议买入'];
+                    const bearishKeywords = ['看跌', '卖出', '风险', '下跌', '谨慎', '悲观', '压力', '不确定', '建议卖出'];
+                    
+                    const hasBullishSignal = bullishKeywords.some(keyword => result.includes(keyword));
+                    const hasBearishSignal = bearishKeywords.some(keyword => result.includes(keyword));
+                    
+                    if (hasBullishSignal && !hasBearishSignal) {
+                        bullish++;
+                    } else if (hasBearishSignal && !hasBullishSignal) {
+                        bearish++;
+                    } else {
+                        // 默认分类：分析师类智能体倾向中性偏多
+                        if (['company_overview_analyst', 'market_analyst', 'sentiment_analyst', 
+                             'fundamentals_analyst', 'news_analyst', 'product_analyst', 
+                             'shareholder_analyst'].includes(agentName)) {
+                            bullish++;
+                        } else {
+                            bearish++;
+                        }
+                    }
+                }
+            });
+            
+            return { bullish, bearish };
+        }
+
+        // 更新投票结果
+        function updateVoteResults(agents) {
+            const stats = calculateVoteStats(agents);
+            const total = stats.bullish + stats.bearish;
+            
+            if (total === 0) return;
+            
+            const bullPercentage = (stats.bullish / total) * 100;
+            const bearPercentage = (stats.bearish / total) * 100;
+            
+            document.getElementById('bullCount').textContent = stats.bullish;
+            document.getElementById('bearCount').textContent = stats.bearish;
+            
+            const bullBar = document.getElementById('bullBar');
+            const bearBar = document.getElementById('bearBar');
+            
+            bullBar.style.width = bullPercentage + '%';
+            bullBar.textContent = bullPercentage.toFixed(1) + '%';
+            bearBar.style.width = bearPercentage + '%';
+            bearBar.textContent = bearPercentage.toFixed(1) + '%';
+        }
+
+        // 生成分析详情卡片
+        function generateAnalysisCards(agents) {
+            const grid = document.getElementById('analysisGrid');
+            grid.innerHTML = '';
+            
+            agents.forEach((agent, index) => {
+                const agentInfo = getAgentInfo(agent.agent_name);
+                let content = agent.result || '暂无分析结果';
+                
+                // 处理Markdown格式的内容，提取主要文本
+                content = processMarkdownContent(content);
+                
+                // 限制显示长度
+                const shortContent = content.length > 200 ? content.substring(0, 200) + '...' : content;
+                const needsExpand = content.length > 200;
+                
+                const card = document.createElement('div');
+                card.className = 'analysis-card';
+                card.style.animationDelay = (index * 0.1) + 's';
+                
+                // 安全处理内容，避免XSS
+                const safeContent = escapeHtml(content);
+                const safeShortContent = escapeHtml(shortContent);
+                
+                card.innerHTML = `
+                    <div class="card-header">
+                        <span class="agent-name">${agentInfo.emoji} ${agentInfo.name}</span>
+                    </div>
+                    <div class="card-content">
+                        <p>${safeShortContent}</p>
+                        ${needsExpand ? `<button class="expand-btn" onclick="toggleExpand(this, ${JSON.stringify(safeContent)})">展开</button>` : ''}
+                    </div>
+                `;
+                
+                grid.appendChild(card);
+            });
+        }
+        
+        // 处理Markdown内容，提取主要文本
+        function processMarkdownContent(content) {
+            if (!content) return '';
+            
+            // 移除Markdown标记，保留主要文本
+            return content
+                .replace(/#{1,6}\s+/g, '') // 移除标题标记
+                .replace(/\*\*(.*?)\*\*/g, '$1') // 移除粗体标记
+                .replace(/\*(.*?)\*/g, '$1') // 移除斜体标记
+                .replace(/`(.*?)`/g, '$1') // 移除代码标记
+                .replace(/\[([^\]]+)\]\([^\)]+\)/g, '$1') // 移除链接标记，保留文本
+                .replace(/^[-*+]\s+/gm, '') // 移除列表标记
+                .replace(/^\d+\.\s+/gm, '') // 移除数字列表标记
+                .replace(/\n{2,}/g, '\n') // 合并多个换行
+                .trim();
+        }
+        
+        // HTML转义函数
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // 生成时间轴 - 严格按照原设计
+        function generateTimeline(agents) {
+            const timeline = document.getElementById('timeline');
+            timeline.innerHTML = '';
+            
+            agents.forEach((agent, index) => {
+                const agentInfo = getAgentInfo(agent.agent_name);
+                let content = agent.result || '暂无分析结果';
+                
+                // 处理Markdown内容
+                content = processMarkdownContent(content);
+                
+                // 确定卡片位置（左右交替）
+                const side = index % 2 === 0 ? 'left' : 'right';
+                
+                const item = document.createElement('div');
+                item.className = `timeline-item ${side}`;
+                item.style.animationDelay = (index * 0.1) + 's';
+                
+                // 保持内容紧凑
+                const displayContent = content.length > 200 ? content.substring(0, 200) + '...' : content;
+                
+                // 获取智能体的时间戳
+                const timestamp = agent.end_time ? 
+                    new Date(agent.end_time).toLocaleString('zh-CN') : 
+                    new Date().toLocaleString('zh-CN');
+                
+                item.innerHTML = `
+                    <div class="timeline-card">
+                        <div class="card-header">
+                            <span class="agent-name">${agentInfo.emoji} ${agentInfo.name}</span>
+                        </div>
+                        <div class="card-content">
+                            <p>${escapeHtml(displayContent)}</p>
+                            <div class="timestamp">${timestamp}</div>
+                        </div>
+                    </div>
+                `;
+                
+                timeline.appendChild(item);
+            });
+        }
+
+        // 展开/收起详情
+        function toggleExpand(button, fullContent) {
+            const paragraph = button.parentElement.querySelector('p');
+            
+            if (button.textContent === '展开') {
+                paragraph.textContent = fullContent;
+                button.textContent = '收起';
+            } else {
+                const shortContent = fullContent.length > 150 ? fullContent.substring(0, 150) + '...' : fullContent;
+                paragraph.textContent = shortContent;
+                button.textContent = '展开';
+            }
+        }
+
+        // 加载会话数据
+        function loadSessionData(sessionFile) {
+            if (sessionFile === 'mock') {
+                // 加载模拟数据用于演示
+                loadMockData();
+                return;
+            }
+            
+            // 从服务器获取真实的JSON会话数据
+            fetch(`/api/session/${sessionFile}`)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    return response.json();
+                })
+                .then(sessionData => {
+                    // 解析真实的JSON数据结构
+                    const agents = sessionData.agents || [];
+                    
+                    // 过滤出已完成的智能体
+                    const completedAgents = agents.filter(agent => 
+                        agent.status === 'completed' && agent.result && agent.result.trim() !== ''
+                    );
+                    
+                    if (completedAgents.length === 0) {
+                        console.warn('没有找到已完成的智能体数据');
+                        loadMockData();
+                        return;
+                    }
+                    
+                    // 更新页面显示
+                    updateVoteResults(completedAgents);
+                    generateAnalysisCards(completedAgents);
+                    generateTimeline(completedAgents);
+                    
+                    console.log(`成功加载会话数据: ${completedAgents.length} 个智能体`);
+                })
+                .catch(error => {
+                    console.error('加载会话数据失败:', error);
+                    // 如果加载失败，显示错误信息并使用模拟数据
+                    alert(`加载会话数据失败: ${error.message}\n将显示模拟数据`);
+                    loadMockData();
+                });
+        }
+        
+        // 加载模拟数据
+        function loadMockData() {
+            const mockAgents = [
+                {
+                    agent_name: 'company_overview_analyst',
+                    status: 'completed',
+                    result: '陕西煤业股份有限公司是中国领先的煤炭开采企业，主营业务包括煤炭开采、洗选、销售等。公司拥有丰富的煤炭资源储备，在行业中具有重要地位。'
+                },
+                {
+                    agent_name: 'market_analyst',
+                    status: 'completed',
+                    result: '从市场表现来看，公司股价近期呈现震荡上行趋势，成交量放大，市场关注度较高。技术指标显示多头力量增强。'
+                },
+                {
+                    agent_name: 'bull_researcher',
+                    status: 'completed',
+                    result: '看涨观点：煤炭价格回升，公司成本控制良好，盈利能力增强。建议买入持有。'
+                },
+                {
+                    agent_name: 'bear_researcher',
+                    status: 'completed',
+                    result: '看跌观点：环保政策趋严，煤炭行业面临转型压力，长期前景存在不确定性。'
+                },
+                {
+                    agent_name: 'risk_manager',
+                    status: 'completed',
+                    result: '风险评估：政策风险中等，市场风险较低，财务风险可控。整体风险等级为中等。'
+                }
+            ];
+            
+            updateVoteResults(mockAgents);
+            generateAnalysisCards(mockAgents);
+            generateTimeline(mockAgents);
+        }
+
+        // 初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            loadSessions();
+            
+            // 会话选择事件
+            document.getElementById('sessionSelector').addEventListener('change', function() {
+                if (this.value) {
+                    loadSessionData(this.value);
+                }
+            });
+            
+            // 默认加载第一个会话的模拟数据
+            setTimeout(() => {
+                loadSessionData('mock');
+            }, 500);
+        });
+    </script>
+</body>
+</html>

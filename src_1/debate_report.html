@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>智能体协同分析报告</title>
+    <link rel="stylesheet" href="../styles.css">
+</head>
+<body>
+    <!-- 顶部导航栏 -->
+    <header class="top-nav">
+        <div class="nav-container">
+            <div class="nav-left">
+                <span class="nav-icon">🔬</span>
+                <span class="nav-title">人工智能实验室</span>
+            </div>
+            <div class="nav-right">
+                <select id="sessionSelector" class="session-selector">
+                    <option value="">选择分析会话...</option>
+                </select>
+                <button id="refreshBtn" class="nav-btn">刷新</button>
+            </div>
+        </div>
+    </header>
+
+    <div class="main-container">
+        <!-- 报告标题区 -->
+        <div class="title-section">
+            <h1 class="main-title">智能体协同分析报告</h1>
+            <p class="subtitle">人工智能实验室智能分析Agent协同分析</p>
+        </div>
+
+        <!-- 专家投票结果卡片 -->
+        <div class="vote-card" id="voteCard" style="display: none;">
+            <div class="vote-header">
+                <h3>📊 专家投票结果</h3>
+            </div>
+            <div class="vote-content">
+                <div class="vote-stats">
+                    <div class="bullish">
+                        <span class="vote-number" id="bullCount">0</span>
+                        <span class="vote-label">看涨 Bullish</span>
+                    </div>
+                    <div class="bearish">
+                        <span class="vote-number" id="bearCount">0</span>
+                        <span class="vote-label">看跌 Bearish</span>
+                    </div>
+                </div>
+                <div class="vote-bar">
+                    <div class="bar-bullish" id="bullBar" style="width: 0%">0%</div>
+                    <div class="bar-bearish" id="bearBar" style="width: 0%">0%</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 专家分析详情 -->
+        <div class="analysis-section" id="analysisSection" style="display: none;">
+            <h2 class="section-title">📋 专家分析详情</h2>
+            <div class="analysis-grid" id="analysisGrid">
+                <!-- 动态生成分析卡片 -->
+            </div>
+        </div>
+
+        <!-- 专家辩论过程 -->
+        <div class="debate-section" id="debateSection" style="display: none;">
+            <h2 class="section-title">🗣️ 专家辩论过程</h2>
+            <p class="section-subtitle">AI智能体协同分析过程实时记录</p>
+            <div class="timeline" id="timeline">
+                <!-- 动态生成时间轴项目 -->
+            </div>
+        </div>
+
+        <!-- 免责声明 -->
+        <div class="disclaimer" id="disclaimer" style="display: none;">
+            <h3>⚠️ 免责声明</h3>
+            <p>本报告由人工智能系统生成，仅供参考，不构成投资建议。投资有风险，入市需谨慎。</p>
+        </div>
+    </div>
+
+    <script>
+        // 智能体信息映射
+        const agentMapping = {
+            'company_overview_analyst': { name: '公司概述分析师', emoji: '🏢', type: 'analyst' },
+            'market_analyst': { name: '市场分析师', emoji: '📈', type: 'analyst' },
+            'sentiment_analyst': { name: '情绪分析师', emoji: '😊', type: 'analyst' },
+            'news_analyst': { name: '新闻分析师', emoji: '📰', type: 'analyst' },
+            'fundamentals_analyst': { name: '基本面分析师', emoji: '📋', type: 'analyst' },
+            'shareholder_analyst': { name: '股东分析师', emoji: '👥', type: 'analyst' },
+            'product_analyst': { name: '产品分析师', emoji: '🏭', type: 'analyst' },
+            'bull_researcher': { name: '看涨研究员', emoji: '🐂', type: 'bull' },
+            'bear_researcher': { name: '看跌研究员', emoji: '🐻', type: 'bear' },
+            'research_manager': { name: '研究经理', emoji: '👔', type: 'manager' },
+            'trader': { name: '交易员', emoji: '💼', type: 'manager' },
+            'aggressive_risk_analyst': { name: '激进风险分析师', emoji: '⚡', type: 'risk' },
+            'safe_risk_analyst': { name: '保守风险分析师', emoji: '🛡️', type: 'risk' },
+            'neutral_risk_analyst': { name: '中性风险分析师', emoji: '⚖️', type: 'risk' },
+            'risk_manager': { name: '风险经理', emoji: '🎯', type: 'risk' }
+        };
+
+        // 获取智能体信息
+        function getAgentInfo(agentName) {
+            return agentMapping[agentName] || { name: agentName, emoji: '🤖', type: 'other' };
+        }
+
+        // 统计投票结果
+        function calculateVoteStats(agents) {
+            let bullCount = 0;
+            let bearCount = 0;
+            
+            agents.forEach(agent => {
+                const agentName = agent.agent_name || '';
+                const result = (agent.result || '').toLowerCase();
+                
+                if (agentName.includes('bull') || result.includes('看涨') || result.includes('买入') || result.includes('上涨')) {
+                    bullCount++;
+                } else if (agentName.includes('bear') || result.includes('看跌') || result.includes('卖出') || result.includes('下跌')) {
+                    bearCount++;
+                }
+            });
+            
+            return { bull: bullCount, bear: bearCount };
+        }
+
+        // 更新投票结果
+        function updateVoteResults(agents) {
+            const stats = calculateVoteStats(agents);
+            const total = stats.bull + stats.bear;
+            
+            if (total === 0) return;
+            
+            const bullPercentage = (stats.bull / total) * 100;
+            const bearPercentage = (stats.bear / total) * 100;
+            
+            document.getElementById('bullCount').textContent = stats.bull;
+            document.getElementById('bearCount').textContent = stats.bear;
+            document.getElementById('bullBar').style.width = bullPercentage + '%';
+            document.getElementById('bullBar').textContent = bullPercentage.toFixed(1) + '%';
+            document.getElementById('bearBar').style.width = bearPercentage + '%';
+            document.getElementById('bearBar').textContent = bearPercentage.toFixed(1) + '%';
+            
+            document.getElementById('voteCard').style.display = 'block';
+        }
+
+        // 生成分析详情卡片
+        function generateAnalysisCards(agents) {
+            const grid = document.getElementById('analysisGrid');
+            grid.innerHTML = '';
+            
+            agents.forEach((agent, index) => {
+                const agentInfo = getAgentInfo(agent.agent_name);
+                const content = agent.result || '';
+                
+                // 限制内容长度
+                const shortContent = content.length > 200 ? content.substring(0, 200) + '...' : content;
+                
+                const card = document.createElement('div');
+                card.className = 'analysis-card';
+                card.style.animationDelay = (index * 0.1) + 's';
+                
+                card.innerHTML = `
+                    <div class="card-header">
+                        <span class="agent-name">${agentInfo.emoji} ${agentInfo.name}</span>
+                        <span class="agent-type ${agentInfo.type}">${agentInfo.type.toUpperCase()}</span>
+                    </div>
+                    <div class="card-content">
+                        <p>${shortContent}</p>
+                        ${content.length > 200 ? `<button class="expand-btn" onclick="toggleExpand(this, '${content.replace(/'/g, "\\'")}')">展开详情</button>` : ''}
+                    </div>
+                `;
+                
+                grid.appendChild(card);
+            });
+            
+            document.getElementById('analysisSection').style.display = 'block';
+        }
+
+        // 生成时间轴
+        function generateTimeline(agents) {
+            const timeline = document.getElementById('timeline');
+            timeline.innerHTML = '';
+            
+            agents.forEach((agent, index) => {
+                const agentInfo = getAgentInfo(agent.agent_name);
+                const content = agent.result || '';
+                const side = index % 2 === 0 ? 'left' : 'right';
+                
+                // 限制内容长度
+                const shortContent = content.length > 300 ? content.substring(0, 300) + '...' : content;
+                
+                const item = document.createElement('div');
+                item.className = `timeline-item ${side}`;
+                item.style.animationDelay = (index * 0.1) + 's';
+                
+                item.innerHTML = `
+                    <div class="timeline-card">
+                        <div class="card-header">
+                            <span class="agent-name">${agentInfo.emoji} ${agentInfo.name}</span>
+                        </div>
+                        <div class="card-content">
+                            <p>${shortContent}</p>
+                            <div class="timestamp">${new Date().toLocaleString('zh-CN')}</div>
+                        </div>
+                    </div>
+                `;
+                
+                timeline.appendChild(item);
+            });
+            
+            document.getElementById('debateSection').style.display = 'block';
+        }
+
+        // 展开/收起详情
+        function toggleExpand(button, fullContent) {
+            const cardContent = button.parentElement;
+            const paragraph = cardContent.querySelector('p');
+            
+            if (button.textContent === '展开详情') {
+                paragraph.textContent = fullContent;
+                button.textContent = '收起详情';
+            } else {
+                const shortContent = fullContent.length > 200 ? fullContent.substring(0, 200) + '...' : fullContent;
+                paragraph.textContent = shortContent;
+                button.textContent = '展开详情';
+            }
+        }
+
+        // 加载会话数据
+        async function loadSessionData(sessionFile) {
+            try {
+                const response = await fetch(`/api/session/${sessionFile}`);
+                const data = await response.json();
+                
+                if (data.agents) {
+                    const completedAgents = data.agents.filter(agent => 
+                        agent.status === 'completed' && agent.result
+                    );
+                    
+                    if (completedAgents.length > 0) {
+                        updateVoteResults(completedAgents);
+                        generateAnalysisCards(completedAgents);
+                        generateTimeline(completedAgents);
+                        document.getElementById('disclaimer').style.display = 'block';
+                    }
+                }
+            } catch (error) {
+                console.error('加载会话数据失败:', error);
+            }
+        }
+
+        // 加载会话列表
+        async function loadSessionList() {
+            try {
+                const response = await fetch('/api/sessions');
+                const sessions = await response.json();
+                
+                const selector = document.getElementById('sessionSelector');
+                selector.innerHTML = '<option value="">选择分析会话...</option>';
+                
+                sessions.forEach(session => {
+                    const option = document.createElement('option');
+                    option.value = session.file;
+                    option.textContent = `${session.name} (${session.time})`;
+                    selector.appendChild(option);
+                });
+            } catch (error) {
+                console.error('加载会话列表失败:', error);
+            }
+        }
+
+        // 初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            loadSessionList();
+            
+            // 会话选择事件
+            document.getElementById('sessionSelector').addEventListener('change', function() {
+                if (this.value) {
+                    loadSessionData(this.value);
+                }
+            });
+            
+            // 刷新按钮事件
+            document.getElementById('refreshBtn').addEventListener('click', function() {
+                loadSessionList();
+            });
+        });
+    </script>
+</body>
+</html>
