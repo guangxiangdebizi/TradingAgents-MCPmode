@@ -87,6 +87,8 @@ class WorkflowOrchestrator:
         workflow.add_node("fundamentals_analyst", self._fundamentals_analyst_node)
         workflow.add_node("shareholder_analyst", self._shareholder_analyst_node)
         workflow.add_node("product_analyst", self._product_analyst_node)
+        # 新增：分析师并行聚合节点
+        workflow.add_node("analysts_parallel", self._analysts_parallel_node)
         
         workflow.add_node("bull_researcher", self._bull_researcher_node)
         workflow.add_node("bear_researcher", self._bear_researcher_node)
@@ -104,17 +106,13 @@ class WorkflowOrchestrator:
         
         # 添加边（定义流程）
         # 第零阶段：公司概述分析
-        workflow.add_edge("company_overview_analyst", "market_analyst")
+        # 概述后进入分析师并行节点（内部并发执行6个分析师）
+        workflow.add_edge("company_overview_analyst", "analysts_parallel")
         
-        # 第一阶段：分析师并行分析
-        workflow.add_edge("market_analyst", "sentiment_analyst")
-        workflow.add_edge("sentiment_analyst", "news_analyst")
-        workflow.add_edge("news_analyst", "fundamentals_analyst")
-        workflow.add_edge("fundamentals_analyst", "shareholder_analyst")
-        workflow.add_edge("shareholder_analyst", "product_analyst")
+        # 第一阶段：分析师并行（在单独节点中完成），完成后进入研究员辩论
+        workflow.add_edge("analysts_parallel", "bull_researcher")
         
-        # 第二阶段：研究员辩论
-        workflow.add_edge("product_analyst", "bull_researcher")
+        # 第二阶段：研究员辩论（由并行节点汇聚后进入）
         workflow.add_conditional_edges(
             "bull_researcher",
             self._should_continue_investment_debate,
@@ -235,6 +233,70 @@ class WorkflowOrchestrator:
         result = await self.agents["product_analyst"].process(state, self.progress_manager)
         
         return result
+
+    async def _analysts_parallel_node(self, state: AgentState) -> AgentState:
+        """分析师并行节点：并发执行6个分析师并合并结果"""
+        import copy
+        from asyncio import gather
+
+        analyst_names = [
+            "market_analyst",
+            "sentiment_analyst",
+            "news_analyst",
+            "fundamentals_analyst",
+            "shareholder_analyst",
+            "product_analyst",
+        ]
+
+        # 为避免并发写 state 产生竞态，对每个任务使用深拷贝
+        tasks = []
+        for name in analyst_names:
+            state_copy = copy.deepcopy(state)
+            tasks.append(self.agents[name].process(state_copy, self.progress_manager))
+
+        results = await gather(*tasks, return_exceptions=False)
+
+        # 将各自字段安全合并回主state（兼容字典或对象）
+        def setter(k: str, v: Any):
+            if isinstance(state, dict):
+                state[k] = v
+            else:
+                setattr(state, k, v)
+
+        def getter_from(res, k: str) -> str:
+            if isinstance(res, dict):
+                return res.get(k, "")
+            return getattr(res, k, "")
+
+        # 需要合并的字段列表
+        report_keys = [
+            "market_report",
+            "sentiment_report",
+            "news_report",
+            "fundamentals_report",
+            "shareholder_report",
+            "product_report",
+        ]
+
+        # 合并报告字段（后到者覆盖为空的不覆盖）
+        for key in report_keys:
+            for res in results:
+                val = getter_from(res, key)
+                if isinstance(val, str) and val.strip():
+                    setter(key, val)
+
+        # 合并执行/工具调用历史（如果存在）
+        hist_keys = ["agent_execution_history", "mcp_tool_calls", "warnings", "errors"]
+        for hkey in hist_keys:
+            merged: List[Any] = []
+            for res in results:
+                part = getter_from(res, hkey)
+                if isinstance(part, list):
+                    merged.extend(part)
+            if merged:
+                setter(hkey, merged)
+
+        return state
 
     async def _bull_researcher_node(self, state: AgentState) -> AgentState:
         """多头研究员节点"""
