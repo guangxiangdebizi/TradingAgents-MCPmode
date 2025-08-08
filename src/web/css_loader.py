@@ -25,31 +25,14 @@ def load_financial_css():
 
 
 def inject_custom_html():
-    """注入自定义HTML元素"""
-    # 隐藏Streamlit的默认元素
+    """注入自定义HTML元素 - 移除不稳定的动态类选择器"""
+    # 只保留必要的全局隐藏，移除动态类名选择器
     hide_streamlit_style = """
     <style>
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
     .stDeployButton {display:none;}
     header {visibility: hidden;}
-    
-    /* 隐藏侧边栏 */
-    .css-1d391kg {
-        display: none;
-    }
-    
-    /* 调整主内容区域 */
-    .css-18e3th9 {
-        padding-left: 0;
-        padding-right: 0;
-    }
-    
-    /* 移除顶部空白 */
-    .css-1y4p8pa {
-        max-width: 100%;
-        padding-top: 1rem;
-    }
     </style>
     """
     st.markdown(hide_streamlit_style, unsafe_allow_html=True)

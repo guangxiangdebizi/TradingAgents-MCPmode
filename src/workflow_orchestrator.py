@@ -384,6 +384,12 @@ class WorkflowOrchestrator:
         else:
             return "risk_manager"
     
+    def _check_cancel(self):
+        """检查是否需要取消分析"""
+        if self.cancel_checker and callable(self.cancel_checker):
+            if self.cancel_checker():
+                raise asyncio.CancelledError("分析已被用户取消")
+
     async def initialize(self) -> bool:
         """初始化MCP连接"""
         try:
@@ -396,11 +402,14 @@ class WorkflowOrchestrator:
         except Exception as e:
             print(f"❌ 工作流编排器初始化失败: {e}")
             return False
-    
-    async def run_analysis(self, user_query: str) -> AgentState:
+
+    async def run_analysis(self, user_query: str, cancel_checker=None) -> AgentState:
         """运行完整的交易分析流程"""
         print("🚀 智能交易分析系统启动")
         print(f"📝 用户查询: {user_query}")
+        
+        # 存储取消检查器
+        self.cancel_checker = cancel_checker
         
         # 初始化进度跟踪器
         self.progress_manager = ProgressTracker()
@@ -417,6 +426,9 @@ class WorkflowOrchestrator:
         )
         
         try:
+            # 检查取消状态
+            self._check_cancel()
+            
             # 运行工作流
             workflow_result = await self.workflow.ainvoke(initial_state)
             
@@ -460,6 +472,31 @@ class WorkflowOrchestrator:
                 self._log_analysis_summary(final_state)
             
             return final_state
+            
+        except asyncio.CancelledError as e:
+            print(f"⚠️ 分析流程已取消: {e}")
+            
+            # 记录取消到进度跟踪器
+            if self.progress_manager:
+                cancel_results = {
+                    "cancelled": True,
+                    "completion_time": datetime.now().isoformat(),
+                    "success": False
+                }
+                self.progress_manager.add_warning("分析已被用户取消")
+                self.progress_manager.log_workflow_completion({"success": False, "cancelled": True})
+            
+            # 安全地添加取消信息
+            try:
+                if hasattr(initial_state, 'add_warning'):
+                    initial_state.add_warning("分析已被用户取消")
+                elif isinstance(initial_state, dict):
+                    if 'warnings' not in initial_state:
+                        initial_state['warnings'] = []
+                    initial_state['warnings'].append("分析已被用户取消")
+            except Exception:
+                pass
+            return initial_state
             
         except Exception as e:
             print(f"❌ 分析流程失败: {e}")

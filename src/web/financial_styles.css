@@ -46,17 +46,13 @@
     font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 }
 
-/* 隐藏侧边栏 */
-.css-1d391kg {
-    display: none;
-}
-
-/* 主内容区域 */
+/* 主内容区域 - 限宽与收紧边距 */
 .main .block-container {
-    padding-top: 1rem;
-    padding-left: 2rem;
-    padding-right: 2rem;
-    max-width: none;
+    max-width: 1280px;
+    padding-left: 1rem;
+    padding-right: 1rem;
+    padding-top: 0.75rem;
+    margin: 0 auto;
 }
 
 /* ========== 顶部抬头样式 ========== */
@@ -114,11 +110,11 @@
     background: var(--bg-card);
     -webkit-backdrop-filter: blur(10px);
     backdrop-filter: blur(10px);
-    border-radius: 16px;
-    padding: 24px;
+    border-radius: 8px;
+    padding: 12px;
     border: 1px solid var(--border-color);
-    box-shadow: var(--shadow-md);
-    margin-bottom: 24px;
+    box-shadow: var(--shadow-sm);
+    margin-bottom: 12px;
     transition: all 0.3s ease;
 }
 
@@ -141,15 +137,15 @@
 /* ========== 指标卡片 ========== */
 .metric-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 20px;
-    margin: 24px 0;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 12px;
+    margin: 16px 0;
 }
 
 .metric-card {
     background: var(--bg-secondary);
-    border-radius: 12px;
-    padding: 20px;
+    border-radius: 6px;
+    padding: 12px;
     border: 1px solid var(--border-color);
     text-align: center;
     transition: all 0.3s ease;
@@ -161,27 +157,34 @@
 }
 
 .metric-value {
-    font-size: 2.5rem;
+    font-size: 1.7rem;
     font-weight: 700;
     color: var(--accent-color);
-    margin-bottom: 8px;
+    margin-bottom: 6px;
 }
 
 .metric-label {
-    font-size: 0.9rem;
+    font-size: 0.8rem;
     color: var(--text-secondary);
     font-weight: 500;
 }
 
 /* ========== 按钮样式 ========== */
+.stButton > button {
+    padding: 6px 12px;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    font-weight: 500;
+}
+
 .btn-primary {
     background: var(--gradient-accent);
     color: white;
     border: none;
-    border-radius: 8px;
-    padding: 12px 24px;
-    font-weight: 600;
-    font-size: 0.95rem;
+    border-radius: 6px;
+    padding: 8px 16px;
+    font-weight: 500;
+    font-size: 0.85rem;
     cursor: pointer;
     transition: all 0.3s ease;
     box-shadow: var(--shadow-sm);
@@ -246,10 +249,10 @@
 .status-indicator {
     display: inline-flex;
     align-items: center;
-    gap: 8px;
-    padding: 6px 12px;
-    border-radius: 20px;
-    font-size: 0.85rem;
+    gap: 4px;
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-size: 0.8rem;
     font-weight: 500;
 }
 
