@@ -148,19 +148,229 @@ def get_agent_display_name(agent_name):
     return name_mapping.get(agent_name, agent_name)
 
 
-def connect_orchestrator():
-    """连接WorkflowOrchestrator"""
+async def connect_orchestrator_async():
+    """异步连接WorkflowOrchestrator"""
     if WorkflowOrchestrator is None:
         return False
     
     try:
         load_dotenv()
         orchestrator = WorkflowOrchestrator()
+        
+        # 🔑 关键步骤：按照main.py的方式正确初始化MCP连接
+        print("正在初始化MCP连接...")
+        await orchestrator.initialize()
+        
+        # 获取工具信息验证连接成功
+        workflow_info = orchestrator.get_workflow_info()
+        tools_count = workflow_info['mcp_tools_info']['total_tools']
+        print(f"✅ 成功连接到MCP服务器，发现 {tools_count} 个工具")
+        
         st.session_state.orchestrator = orchestrator
         return True
     except Exception as e:
-        print(f"连接失败: {e}")  # 只在控制台输出，不在前端显示
+        print(f"连接失败: {e}")
         return False
+
+
+def connect_orchestrator():
+    """连接WorkflowOrchestrator - 同步包装器"""
+    try:
+        # 使用正确的异步处理方式
+        try:
+            loop = asyncio.get_event_loop()
+            if loop.is_running():
+                # 如果循环正在运行，创建新的线程运行
+                import concurrent.futures
+                with concurrent.futures.ThreadPoolExecutor() as executor:
+                    future = executor.submit(lambda: asyncio.run(connect_orchestrator_async()))
+                    result = future.result(timeout=30)
+                    return result
+            else:
+                return loop.run_until_complete(connect_orchestrator_async())
+        except RuntimeError:
+            return asyncio.run(connect_orchestrator_async())
+    except Exception as e:
+        print(f"连接失败: {e}")
+        return False
+
+
+async def get_system_capabilities_async():
+    """异步获取系统能力统计信息"""
+    try:
+        # 创建临时的WorkflowOrchestrator来获取工具信息
+        temp_orchestrator = WorkflowOrchestrator()
+        
+        # 🔑 关键：按照main.py的方式正确初始化
+        print("正在初始化MCP连接以获取工具信息...")
+        await temp_orchestrator.initialize()
+        
+        # 获取工具信息
+        workflow_info = temp_orchestrator.get_workflow_info()
+        print(f"成功获取系统信息：{workflow_info['mcp_tools_info']['total_tools']} 个工具")
+        
+        # 关闭连接
+        await temp_orchestrator.close()
+        
+        return workflow_info
+        
+    except Exception as e:
+        print(f"获取系统能力信息失败: {e}")
+        return None
+
+
+@st.cache_data(ttl=30)
+def get_system_capabilities():
+    """获取系统能力统计信息"""
+    try:
+        # 如果已有连接的orchestrator，直接使用
+        if st.session_state.get('orchestrator'):
+            orchestrator = st.session_state.orchestrator
+            workflow_info = orchestrator.get_workflow_info()
+            return workflow_info
+        
+        # 使用正确的事件循环运行异步函数
+        try:
+            # 尝试获取当前事件循环
+            loop = asyncio.get_event_loop()
+            if loop.is_running():
+                # 如果循环正在运行，创建新的线程运行
+                import concurrent.futures
+                with concurrent.futures.ThreadPoolExecutor() as executor:
+                    future = executor.submit(lambda: asyncio.run(get_system_capabilities_async()))
+                    result = future.result(timeout=30)  # 30秒超时
+                    return result
+            else:
+                # 如果循环未运行，直接使用
+                return loop.run_until_complete(get_system_capabilities_async())
+        except RuntimeError:
+            # 如果没有事件循环，创建新的
+            return asyncio.run(get_system_capabilities_async())
+        
+    except Exception as e:
+        print(f"获取系统能力信息失败: {e}")
+        # 返回基础信息作为备选
+        return {
+            'agents_count': 15,
+            'mcp_tools_info': {
+                'total_tools': 0,
+                'server_count': 1,
+                'servers': {},
+                'agent_permissions': {
+                    'company_overview_analyst': True,
+                    'market_analyst': True,
+                    'sentiment_analyst': True,
+                    'news_analyst': True,
+                    'fundamentals_analyst': True,
+                    'shareholder_analyst': True,
+                    'product_analyst': True,
+                    'bull_researcher': True,
+                    'bear_researcher': True,
+                    'research_manager': False,
+                    'trader': False,
+                    'aggressive_risk_analyst': False,
+                    'safe_risk_analyst': False,
+                    'neutral_risk_analyst': False,
+                    'risk_manager': False
+                }
+            }
+        }
+
+
+def show_system_overview():
+    """显示系统概览"""
+    st.markdown("### 🏛️ AI交易分析实验室")
+    
+    # 获取系统能力信息
+    capabilities = get_system_capabilities()
+    
+    if capabilities and capabilities.get('mcp_tools_info'):
+        # 创建概览卡片
+        col1, col2, col3, col4 = st.columns(4)
+        
+        with col1:
+            mcp_info = capabilities.get('mcp_tools_info', {})
+            total_tools = mcp_info.get('total_tools', 0)
+            st.metric("🔧 MCP工具总数", total_tools if total_tools > 0 else "连接中...")
+        
+        with col2:
+            server_count = mcp_info.get('server_count', 0)
+            st.metric("🖥️ MCP服务器", server_count if server_count > 0 else "1")
+        
+        with col3:
+            agents_count = capabilities.get('agents_count', 0)
+            st.metric("🤖 智能体总数", agents_count if agents_count > 0 else "15")
+        
+        with col4:
+            enabled_agents = len([agent for agent, enabled in mcp_info.get('agent_permissions', {}).items() if enabled])
+            st.metric("✅ 启用MCP权限", enabled_agents if enabled_agents > 0 else "9")
+        
+        # 显示详细工具信息
+        if total_tools > 0:
+            with st.expander("🔍 查看详细工具信息", expanded=False):
+                servers_info = mcp_info.get('servers', {})
+                for server_name, server_data in servers_info.items():
+                    st.markdown(f"**{server_name}** ({server_data.get('tool_count', 0)} 个工具)")
+                    tools = server_data.get('tools', [])
+                    for tool in tools[:5]:  # 只显示前5个工具
+                        tool_desc = tool.get('description', '无描述')[:50] + ('...' if len(tool.get('description', '')) > 50 else '')
+                        st.markdown(f"  - `{tool.get('name', '未知')}`: {tool_desc}")
+                    if len(tools) > 5:
+                        st.markdown(f"  - ... 还有 {len(tools) - 5} 个工具")
+        else:
+            # 如果工具数量为0，显示调试信息
+            with st.expander("🔧 MCP连接状态调试", expanded=True):
+                if st.session_state.get('orchestrator'):
+                    orchestrator = st.session_state.orchestrator
+                    if hasattr(orchestrator, 'mcp_manager'):
+                        mcp_manager = orchestrator.mcp_manager
+                        st.write(f"MCP客户端状态: {'已连接' if mcp_manager.client else '未连接'}")
+                        st.write(f"工具列表长度: {len(mcp_manager.tools)}")
+                        st.write(f"按服务器分组的工具: {len(mcp_manager.tools_by_server)}")
+                        if mcp_manager.tools:
+                            st.write("发现的工具:")
+                            for i, tool in enumerate(mcp_manager.tools[:3]):
+                                st.write(f"  - {tool.name}: {tool.description}")
+                        
+                        # 显示连接的服务器信息
+                        st.write(f"配置的服务器: {list(mcp_manager.config.get('servers', {}).keys())}")
+                else:
+                    st.warning("尚未连接WorkflowOrchestrator")
+        
+        # 显示智能体权限状态
+        with st.expander("👥 智能体MCP权限状态", expanded=False):
+            permissions = mcp_info.get('agent_permissions', {})
+            
+            # 按团队分组显示
+            teams = {
+                '📊 分析师团队': ['company_overview_analyst', 'market_analyst', 'sentiment_analyst', 'news_analyst', 'fundamentals_analyst', 'shareholder_analyst', 'product_analyst'],
+                '🔬 研究员团队': ['bull_researcher', 'bear_researcher'],
+                '👔 管理层': ['research_manager', 'trader'],
+                '⚖️ 风险管理团队': ['aggressive_risk_analyst', 'safe_risk_analyst', 'neutral_risk_analyst', 'risk_manager']
+            }
+            
+            for team_name, team_agents in teams.items():
+                st.markdown(f"**{team_name}**")
+                team_cols = st.columns(len(team_agents))
+                for i, agent in enumerate(team_agents):
+                    with team_cols[i]:
+                        status = "✅" if permissions.get(agent, False) else "❌"
+                        agent_display = get_agent_display_name(agent)
+                        st.markdown(f"{status} {agent_display}", help=f"{agent}: {'启用' if permissions.get(agent, False) else '禁用'}")
+    else:
+        # 如果无法获取系统信息，显示基本信息
+        st.info("🔄 正在初始化系统...")
+        col1, col2, col3, col4 = st.columns(4)
+        with col1:
+            st.metric("🤖 智能体总数", "15")
+        with col2:
+            st.metric("✅ 启用MCP权限", "9")
+        with col3:
+            st.metric("🔧 MCP工具数", "检测中...")
+        with col4:
+            st.metric("🖥️ MCP服务器", "1")
+    
+    st.markdown("---")
 
 
 def disconnect_orchestrator():
@@ -640,6 +850,9 @@ def main():
         st.markdown(create_header_html(), unsafe_allow_html=True)
     except:
         st.title("🏛️ AI实验室 - TradingAgents")
+    
+    # 🎯 系统概览 - 启动时就显示工具统计信息
+    show_system_overview()
     
     # 核心功能区域 - 左右布局，减少滚动
     col1, col2 = st.columns([1, 1])
