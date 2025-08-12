@@ -787,11 +787,44 @@ def show_tasks_overview():
                 st.rerun()
 
 
+def get_max_concurrent_limit() -> int:
+    """从 .env 读取最大并发任务上限，默认 2。"""
+    try:
+        val = os.getenv("MAX_CONCURRENT_ANALYSIS", "2").strip()
+        limit = int(val)
+        return max(1, limit)
+    except Exception:
+        return 2
+
+
+def get_current_running_tasks_count() -> int:
+    """统计当前正在运行的任务数量（使用与任务列表一致的判定逻辑）。"""
+    sessions = get_all_sessions_progress()
+    if not sessions:
+        return 0
+    now_ts = datetime.now().timestamp()
+    # 使用与 show_tasks_overview 相同的 3 分钟活跃窗口
+    recent_minutes = 3
+    running = [
+        s for s in sessions
+        if ((s['status'] == 'running') or (s['progress'] < 100 and s['status'] not in ('completed', 'cancelled')))
+        and (now_ts - s['mtime']) <= recent_minutes * 60
+    ]
+    return len(running)
+
+
 def start_analysis(query: str):
     """开始分析"""
     # 检查连接状态
     if not st.session_state.get('orchestrator'):
         st.error("系统未连接，无法开始分析")
+        return
+    
+    # 并发上限控制
+    max_limit = get_max_concurrent_limit()
+    running_count = get_current_running_tasks_count()
+    if running_count >= max_limit:
+        st.warning(f"当前运行中的任务已达上限（{running_count}/{max_limit}），请稍后再试或等待任务完成")
         return
     
     # 重置状态
