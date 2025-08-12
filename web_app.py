@@ -10,11 +10,10 @@ import sys
 import os
 import asyncio
 import threading
-import time
 import json
 from pathlib import Path
 from datetime import datetime
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, List
 from dotenv import load_dotenv
 
 # 添加项目根目录到Python路径
@@ -22,7 +21,14 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 # 导入样式加载器
 try:
-    from src.web.css_loader import load_financial_css, inject_custom_html, create_header_html
+    from src.web.css_loader import (
+        load_financial_css,
+        inject_custom_html,
+        create_header_html,
+        apply_button_style,
+        create_section_card_html,
+        create_metric_card_html,
+    )
 except ImportError as e:
     st.error(f"无法导入CSS样式模块: {e}")
 
@@ -110,7 +116,30 @@ def load_page_styles():
     try:
         load_financial_css()
         inject_custom_html()
+        try:
+            apply_button_style()
+        except Exception:
+            pass
     except:
+        pass
+
+
+def render_top_header():
+    """将抬头组件紧贴页面最上方（去掉Streamlit默认header与顶部留白）。"""
+    # 移除 Streamlit 自带 header 占位，并压缩主容器的顶部内边距
+    st.markdown(
+        """
+<style>
+header { display: none !important; }
+.main .block-container { padding-top: 0 !important; }
+.header-container { margin-top: 0 !important; }
+</style>
+        """,
+        unsafe_allow_html=True,
+    )
+    try:
+        st.markdown(create_header_html(), unsafe_allow_html=True)
+    except Exception:
         pass
 
 
@@ -196,85 +225,26 @@ def connect_orchestrator():
 
 
 async def get_system_capabilities_async():
-    """异步获取系统能力统计信息"""
+    """异步获取系统能力统计信息（保留简化版本）。"""
     try:
-        # 创建临时的WorkflowOrchestrator来获取工具信息
         temp_orchestrator = WorkflowOrchestrator()
-        
-        # 🔑 关键：按照main.py的方式正确初始化
-        print("正在初始化MCP连接以获取工具信息...")
         await temp_orchestrator.initialize()
-        
-        # 获取工具信息
-        workflow_info = temp_orchestrator.get_workflow_info()
-        print(f"成功获取系统信息：{workflow_info['mcp_tools_info']['total_tools']} 个工具")
-        
-        # 关闭连接
+        info = temp_orchestrator.get_workflow_info()
         await temp_orchestrator.close()
-        
-        return workflow_info
-        
-    except Exception as e:
-        print(f"获取系统能力信息失败: {e}")
+        return info
+    except Exception:
         return None
 
 
 @st.cache_data(ttl=30)
 def get_system_capabilities():
-    """获取系统能力统计信息"""
+    """获取系统能力统计信息（保留，作为底部概览使用）。"""
     try:
-        # 如果已有连接的orchestrator，直接使用
         if st.session_state.get('orchestrator'):
-            orchestrator = st.session_state.orchestrator
-            workflow_info = orchestrator.get_workflow_info()
-            return workflow_info
-        
-        # 使用正确的事件循环运行异步函数
-        try:
-            # 尝试获取当前事件循环
-            loop = asyncio.get_event_loop()
-            if loop.is_running():
-                # 如果循环正在运行，创建新的线程运行
-                import concurrent.futures
-                with concurrent.futures.ThreadPoolExecutor() as executor:
-                    future = executor.submit(lambda: asyncio.run(get_system_capabilities_async()))
-                    result = future.result(timeout=30)  # 30秒超时
-                    return result
-            else:
-                # 如果循环未运行，直接使用
-                return loop.run_until_complete(get_system_capabilities_async())
-        except RuntimeError:
-            # 如果没有事件循环，创建新的
-            return asyncio.run(get_system_capabilities_async())
-        
-    except Exception as e:
-        print(f"获取系统能力信息失败: {e}")
-        # 返回基础信息作为备选
-        return {
-            'agents_count': 15,
-            'mcp_tools_info': {
-                'total_tools': 0,
-                'server_count': 1,
-                'servers': {},
-                'agent_permissions': {
-                    'company_overview_analyst': True,
-                    'market_analyst': True,
-                    'sentiment_analyst': True,
-                    'news_analyst': True,
-                    'fundamentals_analyst': True,
-                    'shareholder_analyst': True,
-                    'product_analyst': True,
-                    'bull_researcher': True,
-                    'bear_researcher': True,
-                    'research_manager': False,
-                    'trader': False,
-                    'aggressive_risk_analyst': False,
-                    'safe_risk_analyst': False,
-                    'neutral_risk_analyst': False,
-                    'risk_manager': False
-                }
-            }
-        }
+            return st.session_state.orchestrator.get_workflow_info()
+        return asyncio.run(get_system_capabilities_async())
+    except Exception:
+        return {'agents_count': 15, 'mcp_tools_info': {'total_tools': 0, 'server_count': 1, 'servers': {}, 'agent_permissions': {}}}
 
 
 def show_system_overview():
@@ -373,13 +343,6 @@ def show_system_overview():
     st.markdown("---")
 
 
-def disconnect_orchestrator():
-    """断开WorkflowOrchestrator连接"""
-    if st.session_state.get('orchestrator'):
-        st.session_state.orchestrator = None
-        st.success("✅ 系统已断开连接")
-
-
 def show_real_time_analysis():
     """实时分析模块 - 自动连接版本"""
     if WorkflowOrchestrator is None:
@@ -440,12 +403,24 @@ def show_history_management():
         st.info("📭 暂无历史分析数据")
         return
     
-    # 简化的文件选择
+    # 简化的文件选择（显示用户问题而非文件名）
     file_options = []
     for json_file in json_files:
         file_time = datetime.fromtimestamp(json_file.stat().st_mtime)
-        display_name = f"{json_file.name} ({file_time.strftime('%m-%d %H:%M')})"
-        file_options.append(display_name)
+        time_str = file_time.strftime('%m-%d %H:%M')
+        label = None
+        try:
+            with open(json_file, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+            user_query = (data.get('user_query') or '').strip()
+            if not user_query:
+                label = f"(无查询) - {time_str}"
+            else:
+                trimmed = (user_query[:40] + '...') if len(user_query) > 40 else user_query
+                label = f"{trimmed} - {time_str}"
+        except Exception:
+            label = f"{json_file.name} ({time_str})"
+        file_options.append(label)
     
     # 记忆选中项索引
     if "history_selected_index" not in st.session_state:
@@ -841,46 +816,54 @@ def stop_analysis():
 
 
 def main():
-    """主界面 - 超紧凑设计，用户快速看到报告"""
+    """主界面 - 精简信息架构，结果优先"""
     # 加载样式
     load_page_styles()
     
-    # 显示专业抬头
-    try:
-        st.markdown(create_header_html(), unsafe_allow_html=True)
-    except:
-        st.title("🏛️ AI实验室 - TradingAgents")
+    # 显示贴顶抬头（紧贴页面最上方）
+    render_top_header()
     
-    # 🎯 系统概览 - 启动时就显示工具统计信息
-    show_system_overview()
     
-    # 核心功能区域 - 左右布局，减少滚动
-    col1, col2 = st.columns([1, 1])
-    
-    with col1:
-        # 实时分析区域（紧凑版）
+    # 采用三段式结构：关键操作区（上）→ 工作区（中）→ 结果与导出（下）
+    st.markdown("---")
+
+    # 1) 关键操作区：输入 + 快速状态
+    op_c1, op_c2, op_c3 = st.columns([1, 1, 1])
+    with op_c1:
         st.markdown("### 🔍 实时分析")
         show_real_time_analysis()
-        
-        # 历史会话管理（紧凑版）
+    with op_c2:
         st.markdown("### 📚 历史会话")
         show_history_management()
-    
-    with col2:
-        # 导出选项（紧凑版）
-        st.markdown("### 📤 导出报告")
-        show_export_options()
-        
-        # 系统状态（超紧凑版）
+    with op_c3:
+        st.markdown("### 🧭 系统状态")
         env_status = "✅" if Path(".env").exists() else "❌"
         mcp_status = "✅" if Path("mcp_config.json").exists() else "❌"
-        
-        st.markdown(f"**系统状态:** 环境 {env_status} | MCP {mcp_status}")
-    
-    # 分析结果展示 - 放在最前面，用户不用滚动就能看到
+        status_c1, status_c2 = st.columns(2)
+        with status_c1:
+            st.metric("环境", env_status)
+        with status_c2:
+            st.metric("MCP", mcp_status)
+
+    #  结果与导出
     st.markdown("---")
-    st.markdown("### 📈 分析结果")
-    show_analysis_results()
+    res_c1, res_c2 = st.columns([3, 1])
+    with res_c1:
+        st.markdown("### 📈 分析结果")
+        show_analysis_results()
+    with res_c2:
+        st.markdown("### 📤 报告导出")
+        show_export_options()
+    
+    #  工作区：信息概览（可选）
+    st.markdown("---")
+    with st.expander("📌 操作说明（可收起）", expanded=False):
+        st.caption("输入查询后点击‘开始分析’，历史会话可直接切换查看结果；导出在下方‘报告导出’区。")
+
+    # 系统概览移至页面底部，避免打断主流程
+    st.markdown("---")
+    with st.expander("🏛️ AI交易分析实验室 - 系统概览", expanded=False):
+        show_system_overview()
 
 
 if __name__ == "__main__":
