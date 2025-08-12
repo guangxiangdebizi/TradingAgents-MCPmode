@@ -139,6 +139,12 @@ graph TD
 3. **数据一致性**: 每个分析师使用深拷贝状态，避免并发冲突
 4. **结果合并**: 智能合并各分析师的报告和执行历史
 
+#### 在线体验（公网地址）
+
+- 体验地址：`http://47.79.147.241:8501`
+- 说明：对外免费开放用于功能体验与演示。
+- 注意：请文明使用，务必不要进行任何形式的攻击、压力测试或恶意访问行为，以免影响服务稳定性。
+
 ## 🚀 快速开始
 
 ### 环境要求
@@ -313,3 +319,10 @@ RISK_MANAGER_MCP=false
 ---
 
 **TradingAgents-MCPmode** - 让AI智能体团队为你的投资决策保驾护航！ 🚀📈
+
+## 📬 联系方式
+
+- 邮箱：`guangxiangdebizi@gmail.com`
+- LinkedIn：[Xingyu Chen](https://www.linkedin.com/in/xingyu-chen-b5b3b0313/)
+- Facebook：[个人主页](https://www.facebook.com/profile.php?id=100072282093932)
+- Bilibili：[个人空间](https://space.bilibili.com/51239486?spm_id_from=333.1007.0.0)
