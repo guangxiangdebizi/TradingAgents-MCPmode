@@ -57,28 +57,93 @@ class MarkdownToPDFConverter:
         self._register_fonts()
     
     def _register_fonts(self):
-        """注册中文字体和emoji字体"""
+        """注册中文字体和emoji字体（含加粗族）"""
         try:
-            # 注册中文字体
-            font_paths = [
-                "C:/Windows/Fonts/msyh.ttc",  # 微软雅黑
+            # 候选字体（Windows/macOS/Linux 常见路径）
+            candidates_regular = [
+                # Windows
+                "C:/Windows/Fonts/msyh.ttc",  # 微软雅黑(集)
+                "C:/Windows/Fonts/msyh.ttf",
                 "C:/Windows/Fonts/simhei.ttf",  # 黑体
-                "C:/Windows/Fonts/simsun.ttc",  # 宋体
+                "C:/Windows/Fonts/simsun.ttc",  # 宋体(集)
+                # macOS
+                "/System/Library/Fonts/PingFang.ttc",
+                "/System/Library/Fonts/STHeiti Light.ttc",
+                # Linux (Noto)
+                "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc",
+                "/usr/share/fonts/opentype/noto/NotoSansCJKSC-Regular.otf",
+                "/usr/share/fonts/truetype/wqy/wqy-zenhei.ttc",
             ]
-            
-            for font_path in font_paths:
-                if os.path.exists(font_path):
-                    if font_path.endswith('.ttc'):
-                        pdfmetrics.registerFont(TTFont('ChineseFont', font_path, subfontIndex=0))
+
+            candidates_bold = [
+                # Windows
+                "C:/Windows/Fonts/msyhbd.ttc",  # 微软雅黑 Bold(集)
+                "C:/Windows/Fonts/msyhbd.ttf",
+                "C:/Windows/Fonts/simhei.ttf",  # 黑体作为粗体替代
+                # macOS
+                "/System/Library/Fonts/PingFang.ttc",
+                # Linux (Noto)
+                "/usr/share/fonts/opentype/noto/NotoSansCJK-Bold.ttc",
+                "/usr/share/fonts/opentype/noto/NotoSansCJKSC-Bold.otf",
+                "/usr/share/fonts/truetype/wqy/wqy-zenhei.ttc",
+            ]
+
+            def register_one(name: str, path: str, subfont_index: int | None = None):
+                if subfont_index is not None:
+                    pdfmetrics.registerFont(TTFont(name, path, subfontIndex=subfont_index))
+                else:
+                    pdfmetrics.registerFont(TTFont(name, path))
+
+            # 注册常规体
+            chinese_regular_registered = False
+            for p in candidates_regular:
+                if os.path.exists(p):
+                    if p.endswith('.ttc'):
+                        # 大多数 .ttc 的 0 索引为常规体
+                        register_one('ChineseFont', p, 0)
                     else:
-                        pdfmetrics.registerFont(TTFont('ChineseFont', font_path))
+                        register_one('ChineseFont', p)
+                    chinese_regular_registered = True
                     break
-            
+
+            # 注册粗体（若找不到则回退到常规体）
+            chinese_bold_registered = False
+            for p in candidates_bold:
+                if os.path.exists(p):
+                    if p.endswith('.ttc'):
+                        # 对于 msyhbd.ttc，常规在 0，粗体在 0 或 1，尝试 1，不行则 0
+                        try:
+                            register_one('ChineseFont-Bold', p, 1)
+                        except Exception:
+                            register_one('ChineseFont-Bold', p, 0)
+                    else:
+                        register_one('ChineseFont-Bold', p)
+                    chinese_bold_registered = True
+                    break
+
+            # 若未注册粗体，则用常规体占位，避免粗体回退到 Helvetica 导致缺字
+            if not chinese_bold_registered and chinese_regular_registered:
+                # 使用相同文件名作为粗体占位
+                pdfmetrics.registerFont(TTFont('ChineseFont-Bold', candidates_regular[0] if os.path.exists(candidates_regular[0]) else p))
+
+            # 注册字体族，确保报告中加粗能正确选择 CJK 字体
+            try:
+                from reportlab.pdfbase.pdfmetrics import registerFontFamily
+                registerFontFamily('ChineseFont', normal='ChineseFont', bold='ChineseFont-Bold', italic='ChineseFont', boldItalic='ChineseFont-Bold')
+            except Exception:
+                pass
+
             # 注册emoji字体
-            emoji_font_path = "C:/Windows/Fonts/seguiemj.ttf"  # Segoe UI Emoji
-            if os.path.exists(emoji_font_path):
-                pdfmetrics.registerFont(TTFont('EmojiFont', emoji_font_path))
-            
+            emoji_candidates = [
+                "C:/Windows/Fonts/seguiemj.ttf",  # Windows Segoe UI Emoji
+                "/System/Library/Fonts/Apple Color Emoji.ttc",  # macOS
+                "/usr/share/fonts/truetype/noto/NotoColorEmoji.ttf",  # Linux
+            ]
+            for p in emoji_candidates:
+                if os.path.exists(p):
+                    pdfmetrics.registerFont(TTFont('EmojiFont', p))
+                    break
+
         except Exception as e:
             print(f"⚠️ 字体注册失败: {e}")
     
@@ -151,11 +216,11 @@ class MarkdownToPDFConverter:
             alignment=TA_JUSTIFY
         ))
         
-        # 代码样式
+        # 代码样式（也用中文字体，避免代码中包含中文时出现方块）
         styles.add(ParagraphStyle(
             name='ChineseCode',
             parent=styles['Code'],
-            fontName='Courier',
+            fontName='ChineseFont',
             fontSize=9,
             spaceAfter=6,
             leftIndent=20,
@@ -175,6 +240,52 @@ class MarkdownToPDFConverter:
         ))
         
         return styles
+    
+    def _convert_inline_markdown_to_markup(self, text: str) -> str:
+        """将常见的行内Markdown语法转换为ReportLab可识别的标记。
+        支持: 粗体(**或__), 斜体(*或_), 行内代码(`code`), 链接[text](url)
+        """
+        # 先处理行内代码，避免其中的星号被误判
+        def repl_code(m):
+            code = m.group(1)
+            return f'<font name="Courier">{html.escape(code)}</font>'
+        text = re.sub(r'`([^`]+)`', repl_code, text)
+
+        # 粗体 (优先处理，避免与斜体冲突)
+        text = re.sub(r'\*\*(.+?)\*\*', r'<b>\1</b>', text)
+        text = re.sub(r'__(.+?)__', r'<b>\1</b>', text)
+
+        # 斜体
+        text = re.sub(r'(?<!\*)\*(?!\*)(.+?)(?<!\*)\*(?!\*)', r'<i>\1</i>', text)
+        text = re.sub(r'(?<!_)_(?!_)(.+?)(?<!_)_(?!_)', r'<i>\1</i>', text)
+
+        # 链接 [text](url)
+        def repl_link(m):
+            label, url = m.group(1), m.group(2)
+            return f'<a href="{html.escape(url)}" color="blue"><u>{html.escape(label)}</u></a>'
+        text = re.sub(r'\[(.+?)\]\((.+?)\)', repl_link, text)
+
+        return text
+
+    def _escape_html_preserve_tags(self, text: str, allowed_tags=("font", "b", "i", "u", "a", "br")) -> str:
+        """转义HTML但保留允许的简单标签。"""
+        # 为每类标签建立占位符
+        placeholders = []
+        temp_text = text
+        for tag in allowed_tags:
+            pattern = re.compile(fr'<{tag}[^>]*?>|</{tag}>')
+            for m in pattern.finditer(temp_text):
+                token = f'__TAG_{len(placeholders)}__'
+                placeholders.append((token, m.group(0)))
+                temp_text = temp_text.replace(m.group(0), token)
+
+        # 转义
+        escaped = html.escape(temp_text)
+
+        # 还原标签
+        for token, original in placeholders:
+            escaped = escaped.replace(token, original)
+        return escaped
     
     def _process_emoji_text(self, text):
         """处理文本中的emoji，使用合适的字体"""
@@ -221,14 +332,27 @@ class MarkdownToPDFConverter:
             # 处理引用
             elif line.startswith('> '):
                 quote = line[2:].strip()
+                quote = self._convert_inline_markdown_to_markup(quote)
                 quote_with_emoji = self._process_emoji_text(quote)
-                elements.append(Paragraph(quote_with_emoji, styles['ChineseQuote']))
+                safe = self._escape_html_preserve_tags(quote_with_emoji)
+                elements.append(Paragraph(safe, styles['ChineseQuote']))
             
             # 处理列表
             elif line.startswith('- '):
                 item = line[2:].strip()
+                item = self._convert_inline_markdown_to_markup(item)
                 item_with_emoji = self._process_emoji_text(item)
-                elements.append(Paragraph(f"• {item_with_emoji}", styles['ChineseNormal']))
+                safe = self._escape_html_preserve_tags(item_with_emoji)
+                elements.append(Paragraph(f"• {safe}", styles['ChineseNormal']))
+
+            # 处理有序列表
+            elif re.match(r'^\d+[\.)]\s+', line):
+                m = re.match(r'^(\d+)[\.)]\s+(.*)$', line)
+                num, content = m.group(1), m.group(2)
+                content = self._convert_inline_markdown_to_markup(content)
+                content_with_emoji = self._process_emoji_text(content)
+                safe = self._escape_html_preserve_tags(content_with_emoji)
+                elements.append(Paragraph(f"{num}. {safe}", styles['ChineseNormal']))
             
             # 处理表格
             elif '|' in line and line.strip().startswith('|'):
@@ -268,8 +392,10 @@ class MarkdownToPDFConverter:
             # 处理普通文本
             else:
                 if line:
+                    # 行内Markdown -> Markup，再处理emoji并转义（保留标签）
+                    line = self._convert_inline_markdown_to_markup(line)
                     text_with_emoji = self._process_emoji_text(line)
-                    escaped_text = self._escape_html_preserve_emoji(text_with_emoji)
+                    escaped_text = self._escape_html_preserve_tags(text_with_emoji)
                     elements.append(Paragraph(escaped_text, styles['ChineseNormal']))
             
             i += 1

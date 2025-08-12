@@ -15,14 +15,16 @@ from typing import Dict, Any, List, Optional
 class JSONToMarkdownConverter:
     """JSON转Markdown转换器"""
     
-    def __init__(self, dump_dir: str = "src/dump"):
+    def __init__(self, dump_dir: str = "src/dump", include_mcp_calls: bool = False):
         """初始化转换器
         
         Args:
             dump_dir: dump文件夹路径
+            include_mcp_calls: 是否在Markdown中包含MCP工具调用信息（默认关闭）
         """
         self.dump_dir = Path(dump_dir)
         self.output_dir = Path("markdown_reports")
+        self.include_mcp_calls = include_mcp_calls
         
         # 确保输出目录存在
         self.output_dir.mkdir(exist_ok=True)
@@ -138,8 +140,8 @@ class JSONToMarkdownConverter:
                 md_lines.append("## 📊 分析结果")
                 md_lines.append("")
                 
-                # 获取MCP调用数据
-                mcp_calls = data.get('mcp_calls', [])
+                # 获取MCP调用数据（可开关，默认不包含）
+                mcp_calls = data.get('mcp_calls', []) if self.include_mcp_calls else []
                 
                 for agent in completed_agents:
                     agent_name = agent.get('agent_name', 'Unknown Agent')
@@ -160,11 +162,12 @@ class JSONToMarkdownConverter:
                     md_lines.append(f"### {section_title}")
                     md_lines.append("")
                     
-                    # 显示该agent的MCP调用信息
-                    agent_mcp_calls = self._get_agent_mcp_calls(agent_name, mcp_calls)
-                    if agent_mcp_calls:
-                        mcp_section = self._generate_mcp_calls_section(agent_name, agent_mcp_calls)
-                        md_lines.append(mcp_section)
+                    # 显示该agent的MCP调用信息（根据开关决定是否展示）
+                    if self.include_mcp_calls:
+                        agent_mcp_calls = self._get_agent_mcp_calls(agent_name, mcp_calls)
+                        if agent_mcp_calls:
+                            mcp_section = self._generate_mcp_calls_section(agent_name, agent_mcp_calls)
+                            md_lines.append(mcp_section)
                     
                     # 处理并导出分析结果，标准化标题格式
                     if agent.get('result'):
@@ -287,10 +290,11 @@ def main():
     parser.add_argument("-a", "--all", action="store_true", help="转换所有JSON文件")
     parser.add_argument("--list", action="store_true", help="列出所有可用的JSON文件")
     parser.add_argument("-d", "--dump-dir", default="src/dump", help="dump文件夹路径")
+    parser.add_argument("--include-mcp", action="store_true", help="在Markdown中包含MCP工具调用信息（默认不包含）")
     
     args = parser.parse_args()
     
-    converter = JSONToMarkdownConverter(args.dump_dir)
+    converter = JSONToMarkdownConverter(args.dump_dir, include_mcp_calls=args.include_mcp)
     
     if args.list:
         # 列出所有可用文件
