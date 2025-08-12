@@ -1,6 +1,7 @@
 import json
 import os
 import uuid
+import time
 from datetime import datetime
 from typing import Dict, Any, Optional
 
@@ -56,16 +57,44 @@ class ProgressTracker:
             print(f"❌ 初始化JSON失败: {e}")
 
     def _save_json(self):
-        """保存数据到JSON文件（原子替换，避免并发交错写）。"""
+        """保存数据到JSON文件（Windows友好：带重试的原子替换，必要时回退为直接写）。"""
+        self.session_data["updated_at"] = datetime.now().isoformat()
+        tmp_path = f"{self.json_file}.{uuid.uuid4().hex}.tmp"
         try:
-            self.session_data["updated_at"] = datetime.now().isoformat()
-            tmp_path = self.json_file + ".tmp"
             with open(tmp_path, 'w', encoding='utf-8') as f:
                 json.dump(self.session_data, f, ensure_ascii=False, indent=2)
-            # 原子替换
-            os.replace(tmp_path, self.json_file)
         except Exception as e:
-            print(f"❌ 保存JSON失败: {e}")
+            print(f"❌ 写临时文件失败: {e}")
+            return
+
+        # Windows 下 os.replace 可能因目的文件被读取而临时拒绝访问；重试几次
+        replaced = False
+        for i in range(6):  # ~ 累计约 1.5 秒
+            try:
+                os.replace(tmp_path, self.json_file)
+                replaced = True
+                break
+            except PermissionError as e:
+                # 回退等待后重试
+                time.sleep(0.25 * (i + 1))
+            except Exception as e:
+                print(f"❌ 替换JSON失败: {e}")
+                break
+
+        if not replaced:
+            # 回退：直接覆盖写入目标（可能不是全原子，但尽量保证成功）
+            try:
+                with open(self.json_file, 'w', encoding='utf-8') as f:
+                    json.dump(self.session_data, f, ensure_ascii=False, indent=2)
+            except Exception as e:
+                print(f"❌ 覆盖写入JSON失败: {e}")
+            finally:
+                # 清理残留临时文件
+                try:
+                    if os.path.exists(tmp_path):
+                        os.remove(tmp_path)
+                except Exception:
+                    pass
     
     def update_user_query(self, query: str):
         """更新用户查询"""
