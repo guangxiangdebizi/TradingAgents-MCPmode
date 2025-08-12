@@ -426,25 +426,25 @@ def show_history_management():
         st.info("📝 暂无已完成的历史会话")
         return
     
-    # 记忆选中项索引
+    # 下拉选择：默认占位提示“请选择历史会话…”，用户需主动展开选择
     if "history_selected_index" not in st.session_state:
-        st.session_state.history_selected_index = 0
-    
+        st.session_state.history_selected_index = -1
+
     def on_session_change():
-        """会话选择变化时自动加载"""
         selected_idx = st.session_state.history_selector_simple
-        if selected_idx < len(completed_files):
+        if isinstance(selected_idx, int) and selected_idx >= 0 and selected_idx < len(completed_files):
             selected_file = str(completed_files[selected_idx])
             load_session_data(selected_file)
             st.session_state.history_selected_index = selected_idx
-    
-    selected_index = st.selectbox(
+
+    st.selectbox(
         "选择历史会话",
-        range(len(file_options)),
-        index=min(st.session_state.history_selected_index, len(file_options) - 1),
+        list(range(len(file_options))),
+        index=None,
         format_func=lambda i: file_options[i],
         key="history_selector_simple",
-        on_change=on_session_change
+        on_change=on_session_change,
+        placeholder="请选择历史会话…"
     )
     
     # 静默加载会话信息，不显示提示
