@@ -144,6 +144,8 @@ graph TD
 - 体验地址：`http://47.79.147.241:8501`
 - 说明：对外免费开放用于功能体验与演示。
 - 注意：请文明使用，务必不要进行任何形式的攻击、压力测试或恶意访问行为，以免影响服务稳定性。
+- <img width="1920" height="1080" alt="image" src="https://github.com/user-attachments/assets/862e38ac-f261-4631-8d97-bccb2dc7ee3a" />
+
 
 ## 🚀 快速开始
 
