@@ -169,75 +169,70 @@ class WorkflowOrchestrator:
     async def _company_overview_analyst_node(self, state: AgentState) -> AgentState:
         """公司概述分析师节点"""
         print("🏢 第0阶段：公司概述分析师")
-        
+        self._check_cancel()
         # 不再在这里调用start_agent，让BaseAgent自己处理
         result = await self.agents["company_overview_analyst"].process(state, self.progress_manager)
-        
+        self._check_cancel()
         return result
 
     async def _market_analyst_node(self, state: AgentState) -> AgentState:
         """市场分析师节点"""
         print("🔍 第1阶段：市场分析师")
-        
+        self._check_cancel()
         # 不再在这里调用start_agent，让BaseAgent自己处理
         result = await self.agents["market_analyst"].process(state, self.progress_manager)
-        
+        self._check_cancel()
         return result
     
     async def _sentiment_analyst_node(self, state: AgentState) -> AgentState:
         """情绪分析师节点"""
         print("😊 情绪分析师")
-        
+        self._check_cancel()
         # 不再在这里调用start_agent，让BaseAgent自己处理
-        
         result = await self.agents["sentiment_analyst"].process(state, self.progress_manager)
-        
+        self._check_cancel()
         return result
 
     async def _news_analyst_node(self, state: AgentState) -> AgentState:
         """新闻分析师节点"""
         print("📰 新闻分析师")
-        
+        self._check_cancel()
         # 不再在这里调用start_agent，让BaseAgent自己处理
-        
         result = await self.agents["news_analyst"].process(state, self.progress_manager)
-        
+        self._check_cancel()
         return result
 
     async def _fundamentals_analyst_node(self, state: AgentState) -> AgentState:
         """基本面分析师节点"""
         print("📊 基本面分析师")
-        
+        self._check_cancel()
         # 不再在这里调用start_agent，让BaseAgent自己处理
-        
         result = await self.agents["fundamentals_analyst"].process(state, self.progress_manager)
-        
+        self._check_cancel()
         return result
 
     async def _shareholder_analyst_node(self, state: AgentState) -> AgentState:
         """股东分析师节点"""
         print("👥 股东分析师")
-        
+        self._check_cancel()
         # 不再在这里调用start_agent，让BaseAgent自己处理
-        
         result = await self.agents["shareholder_analyst"].process(state, self.progress_manager)
-        
+        self._check_cancel()
         return result
 
     async def _product_analyst_node(self, state: AgentState) -> AgentState:
         """产品分析师节点"""
         print("🏭 产品分析师")
-        
+        self._check_cancel()
         # 不再在这里调用start_agent，让BaseAgent自己处理
-        
         result = await self.agents["product_analyst"].process(state, self.progress_manager)
-        
+        self._check_cancel()
         return result
 
     async def _analysts_parallel_node(self, state: AgentState) -> AgentState:
         """分析师并行节点：并发执行6个分析师并合并结果"""
         import copy
-        from asyncio import gather
+        from asyncio import gather, create_task, wait, FIRST_COMPLETED
 
         analyst_names = [
             "market_analyst",
@@ -249,12 +244,21 @@ class WorkflowOrchestrator:
         ]
 
         # 为避免并发写 state 产生竞态，对每个任务使用深拷贝
+        self._check_cancel()
         tasks = []
         for name in analyst_names:
             state_copy = copy.deepcopy(state)
-            tasks.append(self.agents[name].process(state_copy, self.progress_manager))
+            tasks.append(create_task(self.agents[name].process(state_copy, self.progress_manager)))
 
-        results = await gather(*tasks, return_exceptions=False)
+        # 协作式取消：轮询检查取消标记，必要时取消剩余任务
+        pending = set(tasks)
+        done_results = []
+        while pending:
+            self._check_cancel()
+            done, pending = await wait(pending, timeout=0.3, return_when=FIRST_COMPLETED)
+            for d in done:
+                done_results.append(await d)
+        results = done_results
 
         # 将各自字段安全合并回主state（兼容字典或对象）
         def setter(k: str, v: Any):
@@ -301,49 +305,65 @@ class WorkflowOrchestrator:
     async def _bull_researcher_node(self, state: AgentState) -> AgentState:
         """多头研究员节点"""
         print("📈 多头研究员")
+        self._check_cancel()
         result = await self.agents["bull_researcher"].process(state, self.progress_manager)
+        self._check_cancel()
         return result
 
     async def _bear_researcher_node(self, state: AgentState) -> AgentState:
         """空头研究员节点"""
         print("📉 空头研究员")
+        self._check_cancel()
         result = await self.agents["bear_researcher"].process(state, self.progress_manager)
+        self._check_cancel()
         return result
 
     async def _research_manager_node(self, state: AgentState) -> AgentState:
         """研究经理节点"""
         print("🧑‍💼 研究经理")
+        self._check_cancel()
         result = await self.agents["research_manager"].process(state, self.progress_manager)
+        self._check_cancel()
         return result
 
     async def _trader_node(self, state: AgentState) -> AgentState:
         """交易员节点"""
         print("👨‍💻 交易员")
+        self._check_cancel()
         result = await self.agents["trader"].process(state, self.progress_manager)
+        self._check_cancel()
         return result
 
     async def _aggressive_risk_analyst_node(self, state: AgentState) -> AgentState:
         """激进风险分析师节点"""
         print("🔥 激进风险分析师")
+        self._check_cancel()
         result = await self.agents["aggressive_risk_analyst"].process(state, self.progress_manager)
+        self._check_cancel()
         return result
 
     async def _safe_risk_analyst_node(self, state: AgentState) -> AgentState:
         """保守风险分析师节点"""
         print("🛡️ 保守风险分析师")
+        self._check_cancel()
         result = await self.agents["safe_risk_analyst"].process(state, self.progress_manager)
+        self._check_cancel()
         return result
 
     async def _neutral_risk_analyst_node(self, state: AgentState) -> AgentState:
         """中立风险分析师节点"""
         print("⚖️ 中立风险分析师")
+        self._check_cancel()
         result = await self.agents["neutral_risk_analyst"].process(state, self.progress_manager)
+        self._check_cancel()
         return result
 
     async def _risk_manager_node(self, state: AgentState) -> AgentState:
         """风险管理器节点"""
         print("🛡️ 风险管理器")
+        self._check_cancel()
         result = await self.agents["risk_manager"].process(state, self.progress_manager)
+        self._check_cancel()
         return result
 
     # 条件判断函数
@@ -478,13 +498,17 @@ class WorkflowOrchestrator:
             
             # 记录取消到进度跟踪器
             if self.progress_manager:
-                cancel_results = {
-                    "cancelled": True,
-                    "completion_time": datetime.now().isoformat(),
-                    "success": False
-                }
-                self.progress_manager.add_warning("分析已被用户取消")
-                self.progress_manager.log_workflow_completion({"success": False, "cancelled": True})
+                try:
+                    self.progress_manager.add_warning("分析已被用户取消")
+                    # 将会话状态标记为取消
+                    self.progress_manager.session_data["status"] = "cancelled"
+                    self.progress_manager._save_json()
+                except Exception:
+                    pass
+                try:
+                    self.progress_manager.log_workflow_completion({"success": False, "cancelled": True})
+                except Exception:
+                    pass
             
             # 安全地添加取消信息
             try:

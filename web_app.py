@@ -380,6 +380,12 @@ def show_real_time_analysis():
             if st.button("🚀 开始分析", disabled=analysis_disabled, use_container_width=True):
                 if query:
                     start_analysis(query)
+                    # 立即刷新，让“当前任务进度”尽快显示新任务
+                    try:
+                        get_all_sessions_progress.clear()
+                    except Exception:
+                        pass
+                    st.rerun()
     
     with btn_col2:
         # 不在此处显示进度；只提示查看“当前任务进度”模块
@@ -763,7 +769,7 @@ def show_tasks_overview():
         return
 
     # 仅显示“正在运行”的任务，并且限定为最近一段时间内活跃的会话（根据文件修改时间判断）
-    recent_minutes = 3  # 认为3分钟内修改的会话仍在活跃
+    recent_minutes = 5  # 认为5分钟内修改的会话仍在活跃
     now_ts = datetime.now().timestamp()
     filtered = [
         s for s in sessions
@@ -809,8 +815,8 @@ def get_current_running_tasks_count() -> int:
     if not sessions:
         return 0
     now_ts = datetime.now().timestamp()
-    # 使用与 show_tasks_overview 相同的 3 分钟活跃窗口
-    recent_minutes = 3
+    # 使用与 show_tasks_overview 相同的 5 分钟活跃窗口
+    recent_minutes = 5
     running = [
         s for s in sessions
         if ((s['status'] == 'running') or (s['progress'] < 100 and s['status'] not in ('completed', 'cancelled')))
@@ -840,6 +846,11 @@ def start_analysis(query: str):
     
     # 将orchestrator传递给分析函数
     run_analysis_sync(query, st.session_state.orchestrator)
+    # 清理会话列表缓存，确保新任务能立刻出现在任务进度中
+    try:
+        get_all_sessions_progress.clear()
+    except Exception:
+        pass
 
 
 def run_analysis_sync(query: str, orchestrator):
