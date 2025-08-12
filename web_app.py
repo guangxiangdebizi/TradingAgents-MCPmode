@@ -12,7 +12,7 @@ import asyncio
 import threading
 import json
 from pathlib import Path
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Optional, Dict, Any, List
 from dotenv import load_dotenv
 
@@ -376,15 +376,10 @@ def show_real_time_analysis():
                     start_analysis(query)
     
     with btn_col2:
-        # 简化的进度显示
+        # 不在此处显示进度；只提示查看“当前任务进度”模块
         if st.session_state.get('analysis_running') or st.session_state.get('analysis_completed'):
-            progress_data = get_real_analysis_progress()
-            if progress_data:
-                progress = progress_data['progress']
-                st.progress(progress / 100.0)
-                st.caption(f"{progress_data['status']} ({progress_data['completed_agents']}/15)")
+            st.caption("进度已移动到下方 ‘当前任务进度’ 模块查看")
         else:
-            # 显示连接状态
             if st.session_state.get('orchestrator'):
                 st.success("🟢 系统已就绪")
             else:
@@ -403,24 +398,27 @@ def show_history_management():
         st.info("📭 暂无历史分析数据")
         return
     
-    # 简化的文件选择（显示用户问题而非文件名）
+    # 只纳入已完成任务的会话；标签显示用户问题而非文件名
+    completed_files = []
     file_options = []
     for json_file in json_files:
-        file_time = datetime.fromtimestamp(json_file.stat().st_mtime)
-        time_str = file_time.strftime('%m-%d %H:%M')
-        label = None
         try:
             with open(json_file, 'r', encoding='utf-8') as f:
                 data = json.load(f)
+            if (data.get('status') or '').lower() != 'completed':
+                continue
+            file_time = datetime.fromtimestamp(json_file.stat().st_mtime)
+            time_str = file_time.strftime('%m-%d %H:%M')
             user_query = (data.get('user_query') or '').strip()
-            if not user_query:
-                label = f"(无查询) - {time_str}"
-            else:
-                trimmed = (user_query[:40] + '...') if len(user_query) > 40 else user_query
-                label = f"{trimmed} - {time_str}"
+            label = f"(无查询) - {time_str}" if not user_query else f"{(user_query[:40] + '...') if len(user_query) > 40 else user_query} - {time_str}"
+            completed_files.append(json_file)
+            file_options.append(label)
         except Exception:
-            label = f"{json_file.name} ({time_str})"
-        file_options.append(label)
+            continue
+
+    if not completed_files:
+        st.info("📝 暂无已完成的历史会话")
+        return
     
     # 记忆选中项索引
     if "history_selected_index" not in st.session_state:
@@ -429,8 +427,8 @@ def show_history_management():
     def on_session_change():
         """会话选择变化时自动加载"""
         selected_idx = st.session_state.history_selector_simple
-        if selected_idx < len(json_files):
-            selected_file = str(json_files[selected_idx])
+        if selected_idx < len(completed_files):
+            selected_file = str(completed_files[selected_idx])
             load_session_data(selected_file)
             st.session_state.history_selected_index = selected_idx
     
@@ -692,6 +690,103 @@ def get_real_analysis_progress():
         return None
 
 
+@st.cache_data(ttl=2)
+def get_all_sessions_progress():
+    """扫描所有会话文件，返回进度汇总列表。"""
+    sessions_info: List[Dict[str, Any]] = []
+    dump_dir = Path("src/dump")
+    try:
+        if not dump_dir.exists():
+            return []
+        session_files = list(dump_dir.glob("session_*.json"))
+        for sf in session_files:
+            try:
+                with open(sf, 'r', encoding='utf-8') as f:
+                    data = json.load(f)
+                agents = data.get('agents', [])
+                total_agents = 15
+                completed_agents = len([a for a in agents if a.get('status') == 'completed'])
+                progress = (completed_agents / total_agents) * 100 if total_agents > 0 else 0
+                raw_status = (data.get('status') or '').lower()
+                # 推导更稳健的任务状态
+                if raw_status == 'completed' or completed_agents >= total_agents:
+                    status = 'completed'
+                elif raw_status == 'cancelled':
+                    status = 'cancelled'
+                else:
+                    if any((a.get('status') or '').lower() == 'running' for a in agents):
+                        status = 'running'
+                    elif agents and completed_agents < total_agents:
+                        status = 'running'
+                    else:
+                        status = raw_status or 'unknown'
+                user_query = (data.get('user_query') or '').strip()
+                session_id = data.get('session_id', sf.stem)
+                created_at = data.get('created_at', '')
+                # 解析时间
+                try:
+                    created_dt = datetime.fromisoformat(created_at.replace('Z', '+00:00')) if created_at else datetime.fromtimestamp(sf.stat().st_mtime)
+                except Exception:
+                    created_dt = datetime.fromtimestamp(sf.stat().st_mtime)
+                sessions_info.append({
+                    'file': str(sf),
+                    'session_id': session_id,
+                    'user_query': user_query,
+                    'status': status,
+                    'completed': completed_agents,
+                    'total': total_agents,
+                    'progress': progress,
+                    'created_at': created_dt,
+                    'mtime': sf.stat().st_mtime,
+                })
+            except Exception:
+                continue
+        # 最新在前
+        sessions_info.sort(key=lambda x: x['mtime'], reverse=True)
+        return sessions_info
+    except Exception:
+        return []
+
+
+def show_tasks_overview():
+    """展示当前任务进度（多任务）。"""
+    st.markdown("### 🧵 当前任务进度")
+    sessions = get_all_sessions_progress()
+    if not sessions:
+        st.info("当前没有会话任务记录")
+        return
+
+    # 仅显示“正在运行”的任务，并且限定为最近一段时间内活跃的会话（根据文件修改时间判断）
+    recent_minutes = 3  # 认为3分钟内修改的会话仍在活跃
+    now_ts = datetime.now().timestamp()
+    filtered = [
+        s for s in sessions
+        if ((s['status'] == 'running') or (s['progress'] < 100 and s['status'] not in ('completed', 'cancelled')))
+        and (now_ts - s['mtime']) <= recent_minutes * 60
+    ]
+    if not filtered:
+        st.info("暂无进行中的任务")
+        return
+
+    for s in filtered[:20]:  # 最多显示20条，避免过长
+        q = s['user_query'] or s['session_id']
+        title = q if len(q) <= 50 else q[:50] + '...'
+        c1, c2, c3, c4 = st.columns([3, 2, 4, 1])
+        with c1:
+            st.markdown(f"**{title}**")
+            st.caption(s['created_at'].strftime('%m-%d %H:%M'))
+        with c2:
+            emoji = "✅" if s['status'] == 'completed' else "🔄" if s['status'] == 'running' else "⏳"
+            st.markdown(f"{emoji} {s['status']}")
+            st.caption(f"{s['completed']}/{s['total']}")
+        with c3:
+            st.progress(min(max(s['progress'], 0), 100) / 100.0)
+        with c4:
+            if st.button("查看", key=f"view_{s['session_id']}"):
+                load_session_data(s['file'])
+                st.rerun()
+
+
 def start_analysis(query: str):
     """开始分析"""
     # 检查连接状态
@@ -845,7 +940,11 @@ def main():
         with status_c2:
             st.metric("MCP", mcp_status)
 
-    #  结果与导出
+    # 2) 多任务进度总览
+    st.markdown("---")
+    show_tasks_overview()
+
+    # 3) 结果与导出
     st.markdown("---")
     res_c1, res_c2 = st.columns([3, 1])
     with res_c1:
