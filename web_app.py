@@ -853,12 +853,10 @@ def main():
         show_analysis_results()
     with res_c2:
         st.markdown("### 📤 报告导出")
+        with st.expander("📌 操作说明（可收起）", expanded=False):
+            st.caption("输入查询后点击‘开始分析’，历史会话可直接切换查看结果；导出在本区‘报告导出’模块。")
         show_export_options()
-    
-    #  工作区：信息概览（可选）
-    st.markdown("---")
-    with st.expander("📌 操作说明（可收起）", expanded=False):
-        st.caption("输入查询后点击‘开始分析’，历史会话可直接切换查看结果；导出在下方‘报告导出’区。")
+
 
     # 系统概览移至页面底部，避免打断主流程
     st.markdown("---")
