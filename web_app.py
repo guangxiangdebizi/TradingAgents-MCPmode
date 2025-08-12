@@ -30,6 +30,9 @@ try:
         create_metric_card_html,
     )
 except ImportError as e:
+    # 生产环境下可能因为PYTHONPATH或打包方式导致导入失败。
+    # 提示会被全局CSS隐藏，这里同时打印到控制台便于排查。
+    print(f"[web_app] CSS样式模块导入失败: {e}")
     st.error(f"无法导入CSS样式模块: {e}")
 
 # 导入工作流程编排器
@@ -139,8 +142,11 @@ header { display: none !important; }
     )
     try:
         st.markdown(create_header_html(), unsafe_allow_html=True)
-    except Exception:
-        pass
+    except Exception as e:
+        # 回退到原生标题，避免公网环境抬头缺失
+        print(f"[web_app] 渲染自定义抬头失败，使用fallback: {e}")
+        st.title("TradingAgents-MCPmode")
+        st.caption("基于MCP工具的多智能体交易分析系统")
 
 
 @st.cache_data(ttl=5)

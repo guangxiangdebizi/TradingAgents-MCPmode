@@ -1,5 +1,6 @@
 import json
 import os
+import uuid
 from datetime import datetime
 from typing import Dict, Any, Optional
 
@@ -8,7 +9,8 @@ class ProgressTracker:
     """简化的进度跟踪器 - 输出核心agent结果并保存到JSON"""
     
     def __init__(self, session_id: str = None):
-        self.session_id = session_id or datetime.now().strftime("%Y%m%d_%H%M%S")
+        # 生成强唯一的会话ID：微秒 + UUID短码，避免并发同秒冲突
+        self.session_id = session_id or f"{datetime.now().strftime('%Y%m%d_%H%M%S_%f')}_{uuid.uuid4().hex[:8]}"
         self.current_stage = ""
         self.current_agent = ""
         
@@ -33,15 +35,35 @@ class ProgressTracker:
             "final_results": {}
         }
         
-        self._save_json()
+        # 首次写入时确保原子创建，若意外存在则重新生成ID
+        self._init_json_file()
         print(f"🚀 会话开始: {self.session_id}")
     
+    def _init_json_file(self):
+        """原子创建JSON文件，避免并发命名冲突。"""
+        try:
+            # 尝试独占创建；如已存在则换一个ID
+            while True:
+                try:
+                    with open(self.json_file, 'x', encoding='utf-8') as f:
+                        json.dump(self.session_data, f, ensure_ascii=False, indent=2)
+                    break
+                except FileExistsError:
+                    # 极小概率碰撞，重生成ID与路径
+                    self.session_id = f"{datetime.now().strftime('%Y%m%d_%H%M%S_%f')}_{uuid.uuid4().hex[:8]}"
+                    self.json_file = os.path.join(self.dump_dir, f"session_{self.session_id}.json")
+        except Exception as e:
+            print(f"❌ 初始化JSON失败: {e}")
+
     def _save_json(self):
-        """保存数据到JSON文件"""
+        """保存数据到JSON文件（原子替换，避免并发交错写）。"""
         try:
             self.session_data["updated_at"] = datetime.now().isoformat()
-            with open(self.json_file, 'w', encoding='utf-8') as f:
+            tmp_path = self.json_file + ".tmp"
+            with open(tmp_path, 'w', encoding='utf-8') as f:
                 json.dump(self.session_data, f, ensure_ascii=False, indent=2)
+            # 原子替换
+            os.replace(tmp_path, self.json_file)
         except Exception as e:
             print(f"❌ 保存JSON失败: {e}")
     
