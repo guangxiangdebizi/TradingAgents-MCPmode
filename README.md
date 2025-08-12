@@ -144,7 +144,7 @@ graph TD
 - 体验地址：`http://47.79.147.241:8501`
 - 说明：对外免费开放用于功能体验与演示。
 - 注意：请文明使用，务必不要进行任何形式的攻击、压力测试或恶意访问行为，以免影响服务稳定性。
-- <img width="1920" height="1080" alt="image" src="https://github.com/user-attachments/assets/862e38ac-f261-4631-8d97-bccb2dc7ee3a" />
+<img width="1920" height="1080" alt="image" src="https://github.com/user-attachments/assets/c557e15a-de1e-4dbe-b619-b8f32a2a91c2" />
 
 
 ## 🚀 快速开始
@@ -187,6 +187,8 @@ streamlit run web_app.py
 ```
 
 然后在浏览器中访问：`http://localhost:8501`
+<img width="1920" height="1080" alt="image" src="https://github.com/user-attachments/assets/280599ee-c00a-4c8c-b61f-c786e43cc6d4" />
+
 
 #### Web前端功能
 
