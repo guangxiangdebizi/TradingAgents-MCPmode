@@ -587,7 +587,7 @@ def export_to_pdf():
         return
     
     try:
-        converter = MarkdownToPDFConverter("src/dump")
+        converter = MarkdownToPDFConverter("src/dump", include_toc=True)
         result = converter.convert_json_to_pdf_via_markdown(st.session_state.selected_session_file)
         if result and os.path.exists(result):
             st.success(f"✅ PDF导出成功: {result}")

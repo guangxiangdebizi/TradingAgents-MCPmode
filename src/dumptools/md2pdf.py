@@ -8,7 +8,7 @@ Markdown to PDF Converter
 import os
 import sys
 from pathlib import Path
-from typing import Optional, List, Tuple
+from typing import Optional, List
 import argparse
 from datetime import datetime
 import re
@@ -30,7 +30,7 @@ try:
     from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, PageBreak
     from reportlab.platypus.tableofcontents import TableOfContents
     from reportlab.lib import colors
-    from reportlab.lib.enums import TA_LEFT, TA_CENTER, TA_JUSTIFY
+    from reportlab.lib.enums import TA_CENTER, TA_JUSTIFY, TA_LEFT
     from reportlab.pdfbase import pdfmetrics
     from reportlab.pdfbase.ttfonts import TTFont
 except ImportError:
@@ -68,6 +68,8 @@ class MarkdownToPDFConverter:
                 'ChineseHeading2': 2,
                 'ChineseHeading3': 3,
                 'ChineseHeading4': 4,
+                'ChineseHeading5': 5,
+                'ChineseHeading6': 6,
             }
 
         def afterFlowable(self, flowable):
@@ -83,8 +85,8 @@ class MarkdownToPDFConverter:
                         self.canv.bookmarkPage(key)
                         # level-1: PDF 大纲从 0 开始
                         self.canv.addOutlineEntry(text, key, level=level-1, closed=False)
-                        # TOC 通知
-                        self.notify('TOCEntry', (level, text, self.page, key))
+                        # TOC 通知（兼容不同ReportLab版本，仅传三元组）
+                        self.notify('TOCEntry', (level, text, self.page))
             except Exception:
                 pass
     
@@ -193,6 +195,17 @@ class MarkdownToPDFConverter:
             alignment=TA_CENTER,
             textColor=colors.black
         ))
+
+        # TOC页标题样式（不参与目录/书签捕捉）
+        styles.add(ParagraphStyle(
+            name='ChineseTOCTitle',
+            parent=styles['Title'],
+            fontName='ChineseFont',
+            fontSize=16,
+            spaceAfter=12,
+            alignment=TA_LEFT,
+            textColor=colors.black
+        ))
         
         # 一级标题样式
         styles.add(ParagraphStyle(
@@ -235,6 +248,28 @@ class MarkdownToPDFConverter:
             fontSize=11,
             spaceAfter=6,
             spaceBefore=6,
+            textColor=colors.black
+        ))
+
+        # 五级标题样式
+        styles.add(ParagraphStyle(
+            name='ChineseHeading5',
+            parent=styles['Heading3'],
+            fontName='ChineseFont',
+            fontSize=10,
+            spaceAfter=4,
+            spaceBefore=4,
+            textColor=colors.black
+        ))
+
+        # 六级标题样式
+        styles.add(ParagraphStyle(
+            name='ChineseHeading6',
+            parent=styles['Heading3'],
+            fontName='ChineseFont',
+            fontSize=10,
+            spaceAfter=2,
+            spaceBefore=2,
             textColor=colors.black
         ))
         
@@ -328,8 +363,10 @@ class MarkdownToPDFConverter:
         level2 = ParagraphStyle('TOCLevel2', parent=styles['Normal'], fontName='ChineseFont', fontSize=11, leftIndent=40, firstLineIndent=-20, spaceBefore=4, leading=13)
         level3 = ParagraphStyle('TOCLevel3', parent=styles['Normal'], fontName='ChineseFont', fontSize=10, leftIndent=60, firstLineIndent=-20, spaceBefore=2, leading=12)
         level4 = ParagraphStyle('TOCLevel4', parent=styles['Normal'], fontName='ChineseFont', fontSize=10, leftIndent=80, firstLineIndent=-20, spaceBefore=1, leading=12)
-        toc.levelStyles = [level1, level2, level3, level4]
-        flows = [Paragraph('目录', styles['ChineseHeading1']), Spacer(1, 12), toc]
+        level5 = ParagraphStyle('TOCLevel5', parent=styles['Normal'], fontName='ChineseFont', fontSize=10, leftIndent=100, firstLineIndent=-20, spaceBefore=1, leading=12)
+        level6 = ParagraphStyle('TOCLevel6', parent=styles['Normal'], fontName='ChineseFont', fontSize=10, leftIndent=120, firstLineIndent=-20, spaceBefore=1, leading=12)
+        toc.levelStyles = [level1, level2, level3, level4, level5, level6]
+        flows = [Paragraph('目录', styles['ChineseTOCTitle']), Spacer(1, 12), toc]
         return flows
     
     def _convert_inline_markdown_to_markup(self, text: str) -> str:
@@ -422,8 +459,12 @@ class MarkdownToPDFConverter:
                     elements.append(Paragraph(safe_title, styles['ChineseHeading2']))
                 elif level == 3:
                     elements.append(Paragraph(safe_title, styles['ChineseHeading3']))
-                else:
+                elif level == 4:
                     elements.append(Paragraph(safe_title, styles['ChineseHeading4']))
+                elif level == 5:
+                    elements.append(Paragraph(safe_title, styles['ChineseHeading5']))
+                else:
+                    elements.append(Paragraph(safe_title, styles['ChineseHeading6']))
             
             # 处理引用
             elif line.startswith('> '):
@@ -609,13 +650,9 @@ class MarkdownToPDFConverter:
             if cover_md:
                 story.extend(self._parse_cover_to_flowables(cover_md, styles))
                 story.append(PageBreak())
-            # 目录（可开关）；关闭时放占位
+            # 目录（可开关）；关闭时不生成目录页
             if self.include_toc:
                 story.extend(self._create_toc_flowables(styles))
-            else:
-                story.append(Paragraph('目录（预留）', styles['ChineseHeading1']))
-                story.append(Spacer(1, 12))
-                story.append(Paragraph('本页用于未来生成自动目录。', styles['ChineseNormal']))
             story.append(PageBreak())
             # 正文
             content_elements = self._parse_markdown_to_pdf_elements(body_md, styles)
@@ -623,10 +660,16 @@ class MarkdownToPDFConverter:
             
             # 构建PDF（目录开启用两遍构建，否则单遍）
             if self.include_toc:
+                # 强制两遍构建，确保 TOC 页码与书签稳定
                 try:
                     doc.multiBuild(story)
                 except Exception:
-                    doc.build(story)
+                    try:
+                        doc.build(story)
+                        # 再次尝试一遍以更新 TOC
+                        doc.build(story)
+                    except Exception:
+                        pass
             else:
                 doc.build(story)
             

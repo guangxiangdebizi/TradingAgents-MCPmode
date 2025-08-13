@@ -107,9 +107,11 @@ class JSONToMarkdownConverter:
         return '\n'.join(normalized_lines)
 
     def _remove_emojis(self, text: str) -> str:
-        """移除文本中的所有 emoji/变体/不可见空白 等符号。"""
+        """移除文本中的所有 emoji/变体/不可见空白 等符号。
+        特别包含常见星标字符：黑星(\u2605)、白星(\u2606)、五角星(\u2B50)。
+        """
         emoji_pattern = re.compile(
-            r"[\u2300-\u23FF\U0001F600-\U0001F64F\U0001F300-\U0001F5FF\U0001F680-\U0001F6FF\U0001F1E0-\U0001F1FF\U00002600-\U000027BF\U0001F900-\U0001F9FF\U0001F018-\U0001F270]",
+            r"[\u2300-\u23FF\U0001F600-\U0001F64F\U0001F300-\U0001F5FF\U0001F680-\U0001F6FF\U0001F1E0-\U0001F1FF\U00002600-\U000027BF\U0001F900-\U0001F9FF\U0001F018-\U0001F270\u2B50]",
             re.UNICODE,
         )
         cleaned = emoji_pattern.sub('', text)
@@ -253,7 +255,7 @@ class JSONToMarkdownConverter:
         md_lines.append("")
         md_lines.append(f"**研究问题：** {user_query if user_query else 'N/A'}")
         md_lines.append("")
-        md_lines.append("由国金证券人工智能实验室的 Agent 自动生成")
+        md_lines.append("由xx证券人工智能实验室的 Agent 自动生成")
         md_lines.append("")
         md_lines.append(f"**提交日期：** {datetime.now().strftime('%Y 年 %m 月 %d 日')}")
         md_lines.append("")
