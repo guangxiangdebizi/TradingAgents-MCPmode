@@ -27,7 +27,8 @@ try:
     from reportlab.lib.pagesizes import A4
     from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
     from reportlab.lib.units import inch
-    from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
+    from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, PageBreak
+    from reportlab.platypus.tableofcontents import TableOfContents
     from reportlab.lib import colors
     from reportlab.lib.enums import TA_LEFT, TA_CENTER, TA_JUSTIFY
     from reportlab.pdfbase import pdfmetrics
@@ -39,7 +40,7 @@ except ImportError:
 class MarkdownToPDFConverter:
     """Markdown转PDF转换器"""
     
-    def __init__(self, dump_dir: str = "src/dump"):
+    def __init__(self, dump_dir: str = "src/dump", include_toc: bool = False):
         """初始化转换器
         
         Args:
@@ -55,6 +56,37 @@ class MarkdownToPDFConverter:
         
         # 注册字体
         self._register_fonts()
+        self.include_toc = include_toc
+
+    class _TOCDocTemplate(SimpleDocTemplate):
+        def __init__(self, *args, **kwargs):
+            super().__init__(*args, **kwargs)
+            self._heading_seq = 0
+            # 供 afterFlowable 使用的样式名到级别映射（与 _get_styles 保持一致）
+            self._style_to_level = {
+                'ChineseHeading1': 1,
+                'ChineseHeading2': 2,
+                'ChineseHeading3': 3,
+                'ChineseHeading4': 4,
+            }
+
+        def afterFlowable(self, flowable):
+            try:
+                if isinstance(flowable, Paragraph):
+                    style_name = getattr(flowable.style, 'name', '')
+                    level = self._style_to_level.get(style_name)
+                    if level:
+                        text = flowable.getPlainText()
+                        key = f"toc_{self._heading_seq}"
+                        self._heading_seq += 1
+                        # 书签与大纲
+                        self.canv.bookmarkPage(key)
+                        # level-1: PDF 大纲从 0 开始
+                        self.canv.addOutlineEntry(text, key, level=level-1, closed=False)
+                        # TOC 通知
+                        self.notify('TOCEntry', (level, text, self.page, key))
+            except Exception:
+                pass
     
     def _register_fonts(self):
         """注册中文字体和emoji字体（含加粗族）"""
@@ -215,6 +247,16 @@ class MarkdownToPDFConverter:
             spaceAfter=6,
             alignment=TA_JUSTIFY
         ))
+
+        # 居中段落样式（仅用于封面正文，避免影响后续页面）
+        styles.add(ParagraphStyle(
+            name='ChineseCenter',
+            parent=styles['Normal'],
+            fontName='ChineseFont',
+            fontSize=10,
+            spaceAfter=6,
+            alignment=TA_CENTER
+        ))
         
         # 代码样式（也用中文字体，避免代码中包含中文时出现方块）
         styles.add(ParagraphStyle(
@@ -240,6 +282,55 @@ class MarkdownToPDFConverter:
         ))
         
         return styles
+
+    def _split_cover_from_markdown(self, markdown_content: str) -> tuple[str, str]:
+        """按第一条分隔线 '---' 将 Markdown 分成封面与正文。若不存在分隔线，则封面为空。"""
+        lines = markdown_content.split('\n')
+        try:
+            idx = lines.index('---')
+            cover = '\n'.join(lines[:idx])
+            body = '\n'.join(lines[idx+1:])
+            return cover.strip(), body.lstrip('\n')
+        except ValueError:
+            return '', markdown_content
+
+    def _parse_cover_to_flowables(self, cover_md: str, styles) -> list:
+        """把封面 Markdown（加粗行）渲染为置中样式的封面页。"""
+        flows = []
+        if not cover_md.strip():
+            return flows
+        # 处理行内Markdown（粗体/斜体/代码/链接），并保留简单标签
+        def render_inline_md(s: str) -> str:
+            s = self._convert_inline_markdown_to_markup(s)
+            s = self._process_emoji_text(s)
+            s = self._escape_html_preserve_tags(s)
+            return s
+        lines = [l for l in cover_md.split('\n') if l.strip()]
+        if not lines:
+            return flows
+        # 标题
+        title = render_inline_md(lines[0])
+        flows.append(Spacer(1, 100))
+        flows.append(Paragraph(title, styles['ChineseTitle']))
+        flows.append(Spacer(1, 40))
+        # 其余行按普通段落置中
+        for line in lines[1:]:
+            text = render_inline_md(line)
+            p = Paragraph(text, styles['ChineseCenter'])
+            flows.append(p)
+            flows.append(Spacer(1, 12))
+        return flows
+
+    def _create_toc_flowables(self, styles) -> list:
+        toc = TableOfContents()
+        # 定义各级样式
+        level1 = ParagraphStyle('TOCLevel1', parent=styles['Normal'], fontName='ChineseFont', fontSize=12, leftIndent=20, firstLineIndent=-20, spaceBefore=6, leading=14)
+        level2 = ParagraphStyle('TOCLevel2', parent=styles['Normal'], fontName='ChineseFont', fontSize=11, leftIndent=40, firstLineIndent=-20, spaceBefore=4, leading=13)
+        level3 = ParagraphStyle('TOCLevel3', parent=styles['Normal'], fontName='ChineseFont', fontSize=10, leftIndent=60, firstLineIndent=-20, spaceBefore=2, leading=12)
+        level4 = ParagraphStyle('TOCLevel4', parent=styles['Normal'], fontName='ChineseFont', fontSize=10, leftIndent=80, firstLineIndent=-20, spaceBefore=1, leading=12)
+        toc.levelStyles = [level1, level2, level3, level4]
+        flows = [Paragraph('目录', styles['ChineseHeading1']), Spacer(1, 12), toc]
+        return flows
     
     def _convert_inline_markdown_to_markup(self, text: str) -> str:
         """将常见的行内Markdown语法转换为ReportLab可识别的标记。
@@ -285,12 +376,15 @@ class MarkdownToPDFConverter:
         # 还原标签
         for token, original in placeholders:
             escaped = escaped.replace(token, original)
+        # 规范换行标签为自闭合形式，避免 reportlab 解析错误
+        escaped = re.sub(r"<br\s*>", "<br/>", escaped)
+        escaped = re.sub(r"<br\s*/\s*>", "<br/>", escaped)
         return escaped
     
     def _process_emoji_text(self, text):
         """处理文本中的emoji，使用合适的字体"""
-        # 检测emoji并用特殊标记包围
-        emoji_pattern = r'[\U0001F600-\U0001F64F\U0001F300-\U0001F5FF\U0001F680-\U0001F6FF\U0001F1E0-\U0001F1FF\U00002600-\U000027BF\U0001F900-\U0001F9FF\U0001F018-\U0001F270]'
+        # 检测emoji并用特殊标记包围（额外包含常用星标字符）
+        emoji_pattern = r'[\U0001F600-\U0001F64F\U0001F300-\U0001F5FF\U0001F680-\U0001F6FF\U0001F1E0-\U0001F1FF\U00002600-\U000027BF\U0001F900-\U0001F9FF\U0001F018-\U0001F270\u2B50\u2605\u2606]'
         
         def replace_emoji(match):
             emoji = match.group(0)
@@ -318,16 +412,18 @@ class MarkdownToPDFConverter:
                 title = line.lstrip('#').strip()
                 
                 # 处理emoji
+                # 行内Markdown -> 标记，再处理emoji并转义
+                title = self._convert_inline_markdown_to_markup(title)
                 title_with_emoji = self._process_emoji_text(title)
-                
+                safe_title = self._escape_html_preserve_tags(title_with_emoji)
                 if level == 1:
-                    elements.append(Paragraph(title_with_emoji, styles['ChineseHeading1']))
+                    elements.append(Paragraph(safe_title, styles['ChineseHeading1']))
                 elif level == 2:
-                    elements.append(Paragraph(title_with_emoji, styles['ChineseHeading2']))
+                    elements.append(Paragraph(safe_title, styles['ChineseHeading2']))
                 elif level == 3:
-                    elements.append(Paragraph(title_with_emoji, styles['ChineseHeading3']))
+                    elements.append(Paragraph(safe_title, styles['ChineseHeading3']))
                 else:
-                    elements.append(Paragraph(title_with_emoji, styles['ChineseHeading4']))
+                    elements.append(Paragraph(safe_title, styles['ChineseHeading4']))
             
             # 处理引用
             elif line.startswith('> '):
@@ -436,13 +532,24 @@ class MarkdownToPDFConverter:
             table_data.pop(1)
         
         if table_data and len(table_data) > 0:
+            # 将每个单元格转为 Paragraph，支持行内 Markdown 和 emoji
+            rendered_rows = []
+            for r_idx, row_cells in enumerate(table_data):
+                rendered_row = []
+                for c_text in row_cells:
+                    content = self._convert_inline_markdown_to_markup(c_text)
+                    content = self._process_emoji_text(content)
+                    safe = self._escape_html_preserve_tags(content)
+                    rendered_row.append(Paragraph(safe, styles['ChineseNormal']))
+                rendered_rows.append(rendered_row)
+
             # 创建表格
-            table = Table(table_data)
+            table = Table(rendered_rows)
             table.setStyle(TableStyle([
                 ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
                 ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
                 ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
-                ('FONTNAME', (0, 0), (-1, 0), 'ChineseFont'),
+                ('FONTNAME', (0, 0), (-1, 0), 'ChineseFont-Bold'),
                 ('FONTSIZE', (0, 0), (-1, 0), 10),
                 ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
                 ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
@@ -482,8 +589,8 @@ class MarkdownToPDFConverter:
             json_filename = Path(json_file_path).stem
             pdf_file = self.output_dir / f"{json_filename}.pdf"
             
-            # 创建PDF文档
-            doc = SimpleDocTemplate(
+            # 创建带 TOC 支持的 PDF 文档
+            doc = self._TOCDocTemplate(
                 str(pdf_file),
                 pagesize=A4,
                 rightMargin=72,
@@ -495,11 +602,33 @@ class MarkdownToPDFConverter:
             # 获取样式
             styles = self._get_styles()
             
-            # 解析Markdown内容
-            content_elements = self._parse_markdown_to_pdf_elements(markdown_content, styles)
+            # 拆分封面/正文
+            cover_md, body_md = self._split_cover_from_markdown(markdown_content)
+            story = []
+            # 封面
+            if cover_md:
+                story.extend(self._parse_cover_to_flowables(cover_md, styles))
+                story.append(PageBreak())
+            # 目录（可开关）；关闭时放占位
+            if self.include_toc:
+                story.extend(self._create_toc_flowables(styles))
+            else:
+                story.append(Paragraph('目录（预留）', styles['ChineseHeading1']))
+                story.append(Spacer(1, 12))
+                story.append(Paragraph('本页用于未来生成自动目录。', styles['ChineseNormal']))
+            story.append(PageBreak())
+            # 正文
+            content_elements = self._parse_markdown_to_pdf_elements(body_md, styles)
+            story.extend(content_elements)
             
-            # 构建PDF
-            doc.build(content_elements)
+            # 构建PDF（目录开启用两遍构建，否则单遍）
+            if self.include_toc:
+                try:
+                    doc.multiBuild(story)
+                except Exception:
+                    doc.build(story)
+            else:
+                doc.build(story)
             
             print(f"✅ PDF报告已生成: {pdf_file}")
             return str(pdf_file)
@@ -570,10 +699,11 @@ def main():
     parser.add_argument("-l", "--latest", action="store_true", help="转换最新的JSON文件")
     parser.add_argument("-a", "--all", action="store_true", help="转换所有JSON文件")
     parser.add_argument("-d", "--dump-dir", default="src/dump", help="dump文件夹路径")
+    parser.add_argument("--include-toc", action="store_true", help="启用自动目录（默认关闭，关闭时输出目录占位页）")
     
     args = parser.parse_args()
     
-    converter = MarkdownToPDFConverter(args.dump_dir)
+    converter = MarkdownToPDFConverter(args.dump_dir, include_toc=args.include_toc)
     
     if args.all:
         # 转换所有文件
