@@ -58,6 +58,7 @@ class MCPManager:
         model_name = os.getenv("LLM_MODEL", "gpt-4")
         temperature = float(os.getenv("LLM_TEMPERATURE", "0.1"))
         max_tokens = int(os.getenv("LLM_MAX_TOKENS", "4000"))
+        print(f"[LLM INIT] Loaded from env -> LLM_MODEL={model_name}, LLM_TEMPERATURE={temperature}, LLM_MAX_TOKENS={max_tokens}, LLM_BASE_URL={base_url}")
         
         llm = ChatOpenAI(
             model=model_name,
@@ -66,6 +67,13 @@ class MCPManager:
             temperature=temperature,
             max_tokens=max_tokens
         )
+        try:
+            print(
+                f"[LLM INIT] ChatOpenAI config -> model={getattr(llm, 'model', getattr(llm, 'model_name', None))}, "
+                f"temperature={getattr(llm, 'temperature', None)}, max_tokens={getattr(llm, 'max_tokens', None)}"
+            )
+        except Exception as _:
+            pass
         
         print(f"大模型初始化完成: {model_name} @ {base_url}")
         return llm

@@ -213,6 +213,15 @@ class BaseAgent(ABC):
             # 动态获取当前可用工具
             current_tools = self.mcp_manager.get_tools_for_agent(self.agent_name) if self.mcp_enabled else []
 
+            # 打印一次当前LLM关键配置
+            try:
+                print(
+                    f"[LLM CALL] agent={self.agent_name}, model={getattr(self.llm, 'model', getattr(self.llm, 'model_name', None))}, "
+                    f"temperature={getattr(self.llm, 'temperature', None)}, max_tokens={getattr(self.llm, 'max_tokens', None)}"
+                )
+            except Exception as _:
+                pass
+
             # 如果启用了MCP工具，使用智能体（参考test.py的简洁方式）
             if self.mcp_enabled and current_tools and self.mcp_manager.client:
                 print(f"⚡ [{self.agent_name}] 正在调用LLM（带MCP工具）...")

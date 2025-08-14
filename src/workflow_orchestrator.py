@@ -1,6 +1,6 @@
 import os
 import asyncio
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any, List, Optional, Set
 from datetime import datetime
 from langgraph.graph import StateGraph, END
 from dotenv import load_dotenv
@@ -42,6 +42,9 @@ class WorkflowOrchestrator:
         
         # 创建状态图
         self.workflow = self._create_workflow()
+        
+        # 本轮启用的智能体集合（为空表示默认启用全部）
+        self.active_agents: Set[str] = set()
         
         print("🚀 工作流编排器初始化完成")
     
@@ -170,6 +173,10 @@ class WorkflowOrchestrator:
         """公司概述分析师节点"""
         print("🏢 第0阶段：公司概述分析师")
         self._check_cancel()
+        if not self._is_active("company_overview_analyst"):
+            self._skip_agent("company_overview_analyst")
+            self._check_cancel()
+            return state
         # 不再在这里调用start_agent，让BaseAgent自己处理
         result = await self.agents["company_overview_analyst"].process(state, self.progress_manager)
         self._check_cancel()
@@ -179,6 +186,10 @@ class WorkflowOrchestrator:
         """市场分析师节点"""
         print("🔍 第1阶段：市场分析师")
         self._check_cancel()
+        if not self._is_active("market_analyst"):
+            self._skip_agent("market_analyst")
+            self._check_cancel()
+            return state
         # 不再在这里调用start_agent，让BaseAgent自己处理
         result = await self.agents["market_analyst"].process(state, self.progress_manager)
         self._check_cancel()
@@ -188,6 +199,10 @@ class WorkflowOrchestrator:
         """情绪分析师节点"""
         print("😊 情绪分析师")
         self._check_cancel()
+        if not self._is_active("sentiment_analyst"):
+            self._skip_agent("sentiment_analyst")
+            self._check_cancel()
+            return state
         # 不再在这里调用start_agent，让BaseAgent自己处理
         result = await self.agents["sentiment_analyst"].process(state, self.progress_manager)
         self._check_cancel()
@@ -197,6 +212,10 @@ class WorkflowOrchestrator:
         """新闻分析师节点"""
         print("📰 新闻分析师")
         self._check_cancel()
+        if not self._is_active("news_analyst"):
+            self._skip_agent("news_analyst")
+            self._check_cancel()
+            return state
         # 不再在这里调用start_agent，让BaseAgent自己处理
         result = await self.agents["news_analyst"].process(state, self.progress_manager)
         self._check_cancel()
@@ -206,6 +225,10 @@ class WorkflowOrchestrator:
         """基本面分析师节点"""
         print("📊 基本面分析师")
         self._check_cancel()
+        if not self._is_active("fundamentals_analyst"):
+            self._skip_agent("fundamentals_analyst")
+            self._check_cancel()
+            return state
         # 不再在这里调用start_agent，让BaseAgent自己处理
         result = await self.agents["fundamentals_analyst"].process(state, self.progress_manager)
         self._check_cancel()
@@ -215,6 +238,10 @@ class WorkflowOrchestrator:
         """股东分析师节点"""
         print("👥 股东分析师")
         self._check_cancel()
+        if not self._is_active("shareholder_analyst"):
+            self._skip_agent("shareholder_analyst")
+            self._check_cancel()
+            return state
         # 不再在这里调用start_agent，让BaseAgent自己处理
         result = await self.agents["shareholder_analyst"].process(state, self.progress_manager)
         self._check_cancel()
@@ -224,6 +251,10 @@ class WorkflowOrchestrator:
         """产品分析师节点"""
         print("🏭 产品分析师")
         self._check_cancel()
+        if not self._is_active("product_analyst"):
+            self._skip_agent("product_analyst")
+            self._check_cancel()
+            return state
         # 不再在这里调用start_agent，让BaseAgent自己处理
         result = await self.agents["product_analyst"].process(state, self.progress_manager)
         self._check_cancel()
@@ -235,12 +266,14 @@ class WorkflowOrchestrator:
         from asyncio import gather, create_task, wait, FIRST_COMPLETED
 
         analyst_names = [
-            "market_analyst",
-            "sentiment_analyst",
-            "news_analyst",
-            "fundamentals_analyst",
-            "shareholder_analyst",
-            "product_analyst",
+            name for name in [
+                "market_analyst",
+                "sentiment_analyst",
+                "news_analyst",
+                "fundamentals_analyst",
+                "shareholder_analyst",
+                "product_analyst",
+            ] if self._is_active(name)
         ]
 
         # 为避免并发写 state 产生竞态，对每个任务使用深拷贝
@@ -249,6 +282,10 @@ class WorkflowOrchestrator:
         for name in analyst_names:
             state_copy = copy.deepcopy(state)
             tasks.append(create_task(self.agents[name].process(state_copy, self.progress_manager)))
+
+        if not tasks:
+            # 全部禁用，直接返回
+            return state
 
         # 协作式取消：轮询检查取消标记，必要时取消剩余任务
         pending = set(tasks)
@@ -306,6 +343,12 @@ class WorkflowOrchestrator:
         """多头研究员节点"""
         print("📈 多头研究员")
         self._check_cancel()
+        if not self._is_active("bull_researcher"):
+            # 跳过但推进一轮，避免条件边返回未映射的节点
+            self._increment_investment_round(state)
+            self._skip_agent("bull_researcher")
+            self._check_cancel()
+            return state
         result = await self.agents["bull_researcher"].process(state, self.progress_manager)
         self._check_cancel()
         return result
@@ -314,6 +357,12 @@ class WorkflowOrchestrator:
         """空头研究员节点"""
         print("📉 空头研究员")
         self._check_cancel()
+        if not self._is_active("bear_researcher"):
+            # 跳过但推进一轮
+            self._increment_investment_round(state)
+            self._skip_agent("bear_researcher")
+            self._check_cancel()
+            return state
         result = await self.agents["bear_researcher"].process(state, self.progress_manager)
         self._check_cancel()
         return result
@@ -322,6 +371,10 @@ class WorkflowOrchestrator:
         """研究经理节点"""
         print("🧑‍💼 研究经理")
         self._check_cancel()
+        if not self._is_active("research_manager"):
+            self._skip_agent("research_manager")
+            self._check_cancel()
+            return state
         result = await self.agents["research_manager"].process(state, self.progress_manager)
         self._check_cancel()
         return result
@@ -330,6 +383,10 @@ class WorkflowOrchestrator:
         """交易员节点"""
         print("👨‍💻 交易员")
         self._check_cancel()
+        if not self._is_active("trader"):
+            self._skip_agent("trader")
+            self._check_cancel()
+            return state
         result = await self.agents["trader"].process(state, self.progress_manager)
         self._check_cancel()
         return result
@@ -338,6 +395,11 @@ class WorkflowOrchestrator:
         """激进风险分析师节点"""
         print("🔥 激进风险分析师")
         self._check_cancel()
+        if not self._is_active("aggressive_risk_analyst"):
+            self._increment_risk_round(state)
+            self._skip_agent("aggressive_risk_analyst")
+            self._check_cancel()
+            return state
         result = await self.agents["aggressive_risk_analyst"].process(state, self.progress_manager)
         self._check_cancel()
         return result
@@ -346,6 +408,11 @@ class WorkflowOrchestrator:
         """保守风险分析师节点"""
         print("🛡️ 保守风险分析师")
         self._check_cancel()
+        if not self._is_active("safe_risk_analyst"):
+            self._increment_risk_round(state)
+            self._skip_agent("safe_risk_analyst")
+            self._check_cancel()
+            return state
         result = await self.agents["safe_risk_analyst"].process(state, self.progress_manager)
         self._check_cancel()
         return result
@@ -354,6 +421,11 @@ class WorkflowOrchestrator:
         """中立风险分析师节点"""
         print("⚖️ 中立风险分析师")
         self._check_cancel()
+        if not self._is_active("neutral_risk_analyst"):
+            self._increment_risk_round(state)
+            self._skip_agent("neutral_risk_analyst")
+            self._check_cancel()
+            return state
         result = await self.agents["neutral_risk_analyst"].process(state, self.progress_manager)
         self._check_cancel()
         return result
@@ -362,6 +434,10 @@ class WorkflowOrchestrator:
         """风险管理器节点"""
         print("🛡️ 风险管理器")
         self._check_cancel()
+        if not self._is_active("risk_manager"):
+            self._skip_agent("risk_manager")
+            self._check_cancel()
+            return state
         result = await self.agents["risk_manager"].process(state, self.progress_manager)
         self._check_cancel()
         return result
@@ -423,17 +499,28 @@ class WorkflowOrchestrator:
             print(f"❌ 工作流编排器初始化失败: {e}")
             return False
 
-    async def run_analysis(self, user_query: str, cancel_checker=None) -> AgentState:
+    async def run_analysis(self, user_query: str, cancel_checker=None, active_agents: Optional[List[str]] = None) -> AgentState:
         """运行完整的交易分析流程"""
         print("🚀 智能交易分析系统启动")
         print(f"📝 用户查询: {user_query}")
         
         # 存储取消检查器
         self.cancel_checker = cancel_checker
+        # 配置本轮启用的智能体集合
+        if active_agents is None or len(active_agents) == 0:
+            self.active_agents = set(self.agents.keys())
+        else:
+            # 只保留已存在的合法agent名
+            self.active_agents = set([a for a in active_agents if a in self.agents])
         
         # 初始化进度跟踪器
         self.progress_manager = ProgressTracker()
         self.progress_manager.update_user_query(user_query)
+        # 写入本轮启用的智能体列表到会话JSON
+        try:
+            self.progress_manager.set_active_agents(sorted(list(self.active_agents)))
+        except Exception:
+            pass
         self.progress_manager.log_workflow_start({"user_query": user_query})
         
         # 初始化状态
@@ -643,3 +730,63 @@ class WorkflowOrchestrator:
         """关闭资源"""
         await self.mcp_manager.close()
         print("工作流编排器已关闭")
+
+    # ===== 本轮启用控制 & 辅助方法 =====
+    def set_active_agents(self, active_agents: List[str]):
+        """外部设置本轮启用的智能体集合"""
+        if not active_agents:
+            self.active_agents = set(self.agents.keys())
+        else:
+            self.active_agents = set([a for a in active_agents if a in self.agents])
+
+    def _is_active(self, agent_name: str) -> bool:
+        return (not self.active_agents) or (agent_name in self.active_agents)
+
+    def _skip_agent(self, agent_name: str):
+        try:
+            if self.progress_manager:
+                self.progress_manager.add_warning(f"智能体已禁用，本轮跳过", agent_name=agent_name)
+        except Exception:
+            pass
+
+    def _increment_investment_round(self, state: AgentState):
+        try:
+            if isinstance(state, dict):
+                inv = state.get('investment_debate_state', {})
+                inv['count'] = int(inv.get('count', 0)) + 1
+                state['investment_debate_state'] = inv
+            else:
+                inv = getattr(state, 'investment_debate_state', {}) or {}
+                inv['count'] = int(inv.get('count', 0)) + 1
+                state.investment_debate_state = inv
+        except Exception:
+            pass
+
+        try:
+            if self.progress_manager:
+                self.progress_manager.update_debate_state("investment", {
+                    "count": (state.get('investment_debate_state', {}).get('count') if isinstance(state, dict) else state.investment_debate_state.get('count', 0))
+                })
+        except Exception:
+            pass
+
+    def _increment_risk_round(self, state: AgentState):
+        try:
+            if isinstance(state, dict):
+                rsk = state.get('risk_debate_state', {})
+                rsk['count'] = int(rsk.get('count', 0)) + 1
+                state['risk_debate_state'] = rsk
+            else:
+                rsk = getattr(state, 'risk_debate_state', {}) or {}
+                rsk['count'] = int(rsk.get('count', 0)) + 1
+                state.risk_debate_state = rsk
+        except Exception:
+            pass
+
+        try:
+            if self.progress_manager:
+                self.progress_manager.update_debate_state("risk", {
+                    "count": (state.get('risk_debate_state', {}).get('count') if isinstance(state, dict) else state.risk_debate_state.get('count', 0))
+                })
+        except Exception:
+            pass

@@ -58,7 +58,7 @@ st.set_page_config(
     page_title="AI实验室 - TradingAgents",
     page_icon="🏛️",
     layout="wide",
-    initial_sidebar_state="collapsed"
+    initial_sidebar_state="expanded"
 )
 
 # 隐藏Streamlit警告信息
@@ -112,6 +112,27 @@ if "current_session_data" not in st.session_state:
     st.session_state.current_session_data = None
 if "analysis_completed" not in st.session_state:
     st.session_state.analysis_completed = False
+if "active_agents" not in st.session_state:
+    # 默认全部启用
+    st.session_state.active_agents = {
+        'company_overview_analyst': True,
+        'market_analyst': True,
+        'sentiment_analyst': True,
+        'news_analyst': True,
+        'fundamentals_analyst': True,
+        'shareholder_analyst': True,
+        'product_analyst': True,
+        'bull_researcher': True,
+        'bear_researcher': True,
+        'research_manager': True,
+        'trader': True,
+        'aggressive_risk_analyst': True,
+        'safe_risk_analyst': True,
+        'neutral_risk_analyst': True,
+        'risk_manager': True,
+    }
+if "sidebar_force_open" not in st.session_state:
+    st.session_state.sidebar_force_open = True
 
 
 def load_page_styles():
@@ -147,6 +168,109 @@ header { display: none !important; }
         print(f"[web_app] 渲染自定义抬头失败，使用fallback: {e}")
         st.title("TradingAgents-MCPmode")
         st.caption("基于MCP工具的多智能体交易分析系统")
+
+
+def apply_sidebar_visibility():
+    """根据会话状态显示/隐藏侧边栏（不依赖Streamlit自带的汉堡按钮）。"""
+    if st.session_state.get("sidebar_force_open", True):
+        st.markdown(
+            """
+<style>
+/* 适配不同版本的Streamlit侧边栏节点 */
+section[data-testid="stSidebar"],
+[data-testid="stSidebar"],
+div[class*="stSidebar"] {
+  display: block !important;
+  visibility: visible !important;
+  transform: none !important;
+  width: 22rem !important;
+  min-width: 22rem !important;
+  overflow: visible !important;
+}
+</style>
+            """,
+            unsafe_allow_html=True,
+        )
+    else:
+        st.markdown(
+            """
+<style>
+section[data-testid="stSidebar"],
+[data-testid="stSidebar"],
+div[class*="stSidebar"] {
+  width: 0 !important;
+  min-width: 0 !important;
+  overflow: hidden !important;
+}
+</style>
+            """,
+            unsafe_allow_html=True,
+        )
+
+
+def render_sidebar_toggle_controls():
+    """在主页面提供开关，以便无需重启即可打开/关闭侧边栏。"""
+    c1, c2 = st.columns([6, 1])
+    with c2:
+        val = st.checkbox("显示侧边栏", value=st.session_state.get("sidebar_force_open", True))
+        if val != st.session_state.get("sidebar_force_open", True):
+            st.session_state.sidebar_force_open = val
+            st.rerun()
+
+
+def render_left_sidebar_toggle():
+    """在页面左侧放置按钮，点击可展开/收起侧边栏。"""
+    left_col, _ = st.columns([1, 9])
+    with left_col:
+        is_open = st.session_state.get("sidebar_force_open", True)
+        if not is_open:
+            if st.button("☰ 打开侧边栏", key="btn_open_sidebar", use_container_width=True):
+                st.session_state.sidebar_force_open = True
+                st.rerun()
+        else:
+            if st.button("⨯ 收起侧边栏", key="btn_close_sidebar", use_container_width=True):
+                st.session_state.sidebar_force_open = False
+                st.rerun()
+
+def _get_agent_groups():
+    """按团队返回智能体分组"""
+    return {
+        '📊 分析师团队': ['company_overview_analyst', 'market_analyst', 'sentiment_analyst', 'news_analyst', 'fundamentals_analyst', 'shareholder_analyst', 'product_analyst'],
+        '🔬 研究员团队': ['bull_researcher', 'bear_researcher'],
+        '👔 管理层': ['research_manager', 'trader'],
+        '⚖️ 风险管理团队': ['aggressive_risk_analyst', 'safe_risk_analyst', 'neutral_risk_analyst', 'risk_manager'],
+    }
+
+
+def render_sidebar_agent_selector():
+    """侧边栏：选择本轮启用的智能体"""
+    st.sidebar.markdown("### 🤖 本轮启用智能体")
+
+    # 批量控制按钮
+    c1, c2 = st.sidebar.columns(2)
+    with c1:
+        if st.button("全选", key="select_all_agents"):
+            for k in st.session_state.active_agents.keys():
+                st.session_state.active_agents[k] = True
+    with c2:
+        if st.button("全不选", key="deselect_all_agents"):
+            for k in st.session_state.active_agents.keys():
+                st.session_state.active_agents[k] = False
+
+    selected_count = len([1 for v in st.session_state.active_agents.values() if v])
+    st.sidebar.caption(f"已启用 {selected_count}/15")
+
+    # 分组复选
+    for team_name, agents in _get_agent_groups().items():
+        st.sidebar.markdown(f"**{team_name}**")
+        for agent in agents:
+            display = get_agent_display_name(agent)
+            st.session_state.active_agents[agent] = st.sidebar.checkbox(
+                display,
+                value=st.session_state.active_agents.get(agent, True),
+                key=f"agent_enable_{agent}"
+            )
+    st.sidebar.markdown("---")
 
 
 @st.cache_data(ttl=5)
@@ -669,7 +793,8 @@ def get_real_analysis_progress():
             data = json.load(f)
         
         agents = data.get('agents', [])
-        total_agents = 15  # 总共15个智能体
+        # 以会话中记录的 active_agents 为准；若缺省则回退到15
+        total_agents = len(data.get('active_agents', [])) or 15
         completed_agents = len([a for a in agents if a.get('status') == 'completed'])
         
         progress = (completed_agents / total_agents) * 100 if total_agents > 0 else 0
@@ -716,7 +841,7 @@ def get_all_sessions_progress():
                 with open(sf, 'r', encoding='utf-8') as f:
                     data = json.load(f)
                 agents = data.get('agents', [])
-                total_agents = 15
+                total_agents = len(data.get('active_agents', [])) or 15
                 completed_agents = len([a for a in agents if a.get('status') == 'completed'])
                 progress = (completed_agents / total_agents) * 100 if total_agents > 0 else 0
                 raw_status = (data.get('status') or '').lower()
@@ -839,13 +964,19 @@ def start_analysis(query: str):
         st.warning(f"当前运行中的任务已达上限（{running_count}/{max_limit}），请稍后再试或等待任务完成")
         return
     
+    # 选取本轮启用的智能体
+    try:
+        selected_agents = [a for a, enabled in st.session_state.active_agents.items() if enabled]
+    except Exception:
+        selected_agents = []
+
     # 重置状态
     st.session_state.analysis_running = True
     st.session_state.analysis_completed = False
     st.session_state.analysis_cancelled = False
     
     # 将orchestrator传递给分析函数
-    run_analysis_sync(query, st.session_state.orchestrator)
+    run_analysis_sync(query, st.session_state.orchestrator, selected_agents)
     # 清理会话列表缓存，确保新任务能立刻出现在任务进度中
     try:
         get_all_sessions_progress.clear()
@@ -853,7 +984,7 @@ def start_analysis(query: str):
         pass
 
 
-def run_analysis_sync(query: str, orchestrator):
+def run_analysis_sync(query: str, orchestrator, active_agents: List[str]):
     """在后台线程中运行分析，避免阻塞Streamlit主线程"""
     import threading
     
@@ -883,7 +1014,7 @@ def run_analysis_sync(query: str, orchestrator):
             asyncio.set_event_loop(loop)
             
             try:
-                result = loop.run_until_complete(run_single_analysis_async_safe(query, orchestrator, analysis_state))
+                result = loop.run_until_complete(run_single_analysis_async_safe(query, orchestrator, analysis_state, active_agents))
                 
                 # 再次检查是否已被取消
                 if analysis_state.cancelled:
@@ -915,7 +1046,7 @@ def run_analysis_sync(query: str, orchestrator):
     st.session_state.analysis_state_obj = analysis_state
 
 
-async def run_single_analysis_async_safe(user_query: str, orchestrator, analysis_state) -> Optional[dict]:
+async def run_single_analysis_async_safe(user_query: str, orchestrator, analysis_state, active_agents: List[str]) -> Optional[dict]:
     """安全的异步分析函数"""
     try:
         # 检查取消状态
@@ -933,7 +1064,12 @@ async def run_single_analysis_async_safe(user_query: str, orchestrator, analysis
         def cancel_checker():
             return analysis_state.cancelled
         
-        result = await orchestrator.run_analysis(user_query, cancel_checker)
+        # 传入本轮启用的智能体列表
+        try:
+            orchestrator.set_active_agents(active_agents)
+        except Exception:
+            pass
+        result = await orchestrator.run_analysis(user_query, cancel_checker, active_agents=active_agents)
         
         # 检查取消状态
         if analysis_state.cancelled:
@@ -965,10 +1101,19 @@ def main():
     # 加载样式
     load_page_styles()
     
+    # 应用侧边栏可见性
+    apply_sidebar_visibility()
+    
+    # 左侧放置显式的开关按钮
+    render_left_sidebar_toggle()
+
     # 显示贴顶抬头（紧贴页面最上方）
     render_top_header()
     
     
+    # 渲染侧边栏：智能体启用开关
+    render_sidebar_agent_selector()
+
     # 采用三段式结构：关键操作区（上）→ 工作区（中）→ 结果与导出（下）
     st.markdown("---")
 
@@ -989,6 +1134,9 @@ def main():
             st.metric("环境", env_status)
         with status_c2:
             st.metric("MCP", mcp_status)
+
+    # 在页面右上角提供侧边栏开关控件
+    render_sidebar_toggle_controls()
 
     # 2) 多任务进度总览
     st.markdown("---")

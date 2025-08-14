@@ -27,6 +27,7 @@ class ProgressTracker:
             "updated_at": datetime.now().isoformat(),
             "status": "active",
             "user_query": "",
+            "active_agents": [],
             "stages": [],
             "agents": [],
             "actions": [],
@@ -101,6 +102,14 @@ class ProgressTracker:
         self.session_data["user_query"] = query
         self._save_json()
         print(f"📝 用户查询: {query}")
+
+    def set_active_agents(self, active_agents):
+        """记录本轮启用的智能体列表"""
+        try:
+            self.session_data["active_agents"] = list(active_agents or [])
+            self._save_json()
+        except Exception:
+            pass
     
     def start_stage(self, stage_name: str, description: str = ""):
         """开始新阶段"""
