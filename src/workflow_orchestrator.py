@@ -732,6 +732,13 @@ class WorkflowOrchestrator:
         print("工作流编排器已关闭")
 
     # ===== 本轮启用控制 & 辅助方法 =====
+    def set_debate_rounds(self, investment_rounds: Optional[int] = None, risk_rounds: Optional[int] = None):
+        """设置本轮辩论的最大轮次（立即生效，用于下一次 run_analysis）。"""
+        if isinstance(investment_rounds, int) and investment_rounds >= 0:
+            self.max_debate_rounds = investment_rounds
+        if isinstance(risk_rounds, int) and risk_rounds >= 0:
+            self.max_risk_debate_rounds = risk_rounds
+
     def set_active_agents(self, active_agents: List[str]):
         """外部设置本轮启用的智能体集合"""
         if not active_agents:

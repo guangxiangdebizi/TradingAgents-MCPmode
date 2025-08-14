@@ -201,6 +201,36 @@ def render_main_agent_selector():
             st.caption(f"已启用 {selected_count}/15")
 
 
+def render_debate_round_controls():
+    """主页面：辩论轮次配置（投资辩论与风险辩论）。"""
+    with st.expander("🌀 辩论轮次设置", expanded=False):
+        # 从已连接的 orchestrator 获取当前默认值
+        cur_inv = 3
+        cur_risk = 3
+        try:
+            if st.session_state.get('orchestrator'):
+                info = st.session_state.orchestrator.get_workflow_info()
+                cur_inv = int(info.get('max_debate_rounds', cur_inv))
+                cur_risk = int(info.get('max_risk_debate_rounds', cur_risk))
+        except Exception:
+            pass
+
+        inv_rounds = st.slider("投资辩论轮次 (bull/bear)", min_value=0, max_value=10, value=cur_inv, step=1)
+        risk_rounds = st.slider("风险辩论轮次 (激进/保守/中性)", min_value=0, max_value=9, value=cur_risk, step=1)
+
+        cols = st.columns([1,1,6])
+        with cols[0]:
+            if st.button("应用本次设置", key="apply_debate_rounds"):
+                try:
+                    if st.session_state.get('orchestrator'):
+                        st.session_state.orchestrator.set_debate_rounds(inv_rounds, risk_rounds)
+                        st.success("已应用到本次任务。")
+                    else:
+                        st.warning("系统未连接，稍后自动应用。")
+                except Exception as e:
+                    st.error(f"设置失败: {e}")
+
+
 @st.cache_data(ttl=15)
 def get_session_files_list():
     """获取会话文件列表"""
@@ -1037,6 +1067,7 @@ def main():
     
     # 主页面：智能体启用开关（置于关键操作区之前，便于先选后跑）
     render_main_agent_selector()
+    render_debate_round_controls()
 
     # 采用三段式结构：关键操作区（上）→ 工作区（中）→ 结果与导出（下）
     st.markdown("---")
