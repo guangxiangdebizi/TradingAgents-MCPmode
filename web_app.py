@@ -76,28 +76,10 @@ try:
 except:
     pass
 
-# 添加CSS隐藏不需要的元素
+# 添加CSS隐藏不需要的元素（保留）
 st.markdown("""
 <style>
-/* 隐藏成功提示框 */
-.stAlert[data-testid="stAlertContainer"] {
-    display: none !important;
-}
-
-/* 隐藏警告提示框 */
-.stAlert {
-    display: none !important;
-}
-
-/* 隐藏所有通知 */
-[data-baseweb="notification"] {
-    display: none !important;
-}
-
-/* 隐藏Streamlit的默认警告 */
-.stException {
-    display: none !important;
-}
+.stAlert[data-testid="stAlertContainer"], .stAlert, [data-baseweb="notification"], .stException { display: none !important; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -131,8 +113,6 @@ if "active_agents" not in st.session_state:
         'neutral_risk_analyst': True,
         'risk_manager': True,
     }
-if "sidebar_force_open" not in st.session_state:
-    st.session_state.sidebar_force_open = True
 
 
 def load_page_styles():
@@ -170,67 +150,8 @@ header { display: none !important; }
         st.caption("基于MCP工具的多智能体交易分析系统")
 
 
-def apply_sidebar_visibility():
-    """根据会话状态显示/隐藏侧边栏（不依赖Streamlit自带的汉堡按钮）。"""
-    if st.session_state.get("sidebar_force_open", True):
-        st.markdown(
-            """
-<style>
-/* 适配不同版本的Streamlit侧边栏节点 */
-section[data-testid="stSidebar"],
-[data-testid="stSidebar"],
-div[class*="stSidebar"] {
-  display: block !important;
-  visibility: visible !important;
-  transform: none !important;
-  width: 22rem !important;
-  min-width: 22rem !important;
-  overflow: visible !important;
-}
-</style>
-            """,
-            unsafe_allow_html=True,
-        )
-    else:
-        st.markdown(
-            """
-<style>
-section[data-testid="stSidebar"],
-[data-testid="stSidebar"],
-div[class*="stSidebar"] {
-  width: 0 !important;
-  min-width: 0 !important;
-  overflow: hidden !important;
-}
-</style>
-            """,
-            unsafe_allow_html=True,
-        )
-
-
 def render_sidebar_toggle_controls():
-    """在主页面提供开关，以便无需重启即可打开/关闭侧边栏。"""
-    c1, c2 = st.columns([6, 1])
-    with c2:
-        val = st.checkbox("显示侧边栏", value=st.session_state.get("sidebar_force_open", True))
-        if val != st.session_state.get("sidebar_force_open", True):
-            st.session_state.sidebar_force_open = val
-            st.rerun()
-
-
-def render_left_sidebar_toggle():
-    """在页面左侧放置按钮，点击可展开/收起侧边栏。"""
-    left_col, _ = st.columns([1, 9])
-    with left_col:
-        is_open = st.session_state.get("sidebar_force_open", True)
-        if not is_open:
-            if st.button("☰ 打开侧边栏", key="btn_open_sidebar", use_container_width=True):
-                st.session_state.sidebar_force_open = True
-                st.rerun()
-        else:
-            if st.button("⨯ 收起侧边栏", key="btn_close_sidebar", use_container_width=True):
-                st.session_state.sidebar_force_open = False
-                st.rerun()
+    return
 
 def _get_agent_groups():
     """按团队返回智能体分组"""
@@ -242,38 +163,45 @@ def _get_agent_groups():
     }
 
 
-def render_sidebar_agent_selector():
-    """侧边栏：选择本轮启用的智能体"""
-    st.sidebar.markdown("### 🤖 本轮启用智能体")
+def render_main_agent_selector():
+    """主页面：选择本轮启用的智能体（不使用侧边栏）。"""
+    with st.expander("🤖 本轮启用智能体", expanded=False):
+        c1, c2, c3 = st.columns([1, 1, 6])
+        with c1:
+            if st.button("全选", key="main_select_all_agents"):
+                for k in st.session_state.active_agents.keys():
+                    st.session_state.active_agents[k] = True
+                st.rerun()
+        with c2:
+            if st.button("全不选", key="main_deselect_all_agents"):
+                for k in st.session_state.active_agents.keys():
+                    st.session_state.active_agents[k] = False
+                st.rerun()
+        
+        # 分组复选 - 先处理所有checkbox，再计算统计
+        checkbox_states = {}
+        for team_name, agents in _get_agent_groups().items():
+            st.markdown(f"**{team_name}**")
+            cols = st.columns(max(3, min(5, len(agents))))
+            for i, agent in enumerate(agents):
+                with cols[i % len(cols)]:
+                    display = get_agent_display_name(agent)
+                    checkbox_states[agent] = st.checkbox(
+                        display,
+                        value=st.session_state.active_agents.get(agent, True),
+                        key=f"main_agent_enable_{agent}"
+                    )
+        
+        # 更新session_state并计算实时统计
+        for agent, state in checkbox_states.items():
+            st.session_state.active_agents[agent] = state
+        
+        with c3:
+            selected_count = len([1 for v in checkbox_states.values() if v])
+            st.caption(f"已启用 {selected_count}/15")
 
-    # 批量控制按钮
-    c1, c2 = st.sidebar.columns(2)
-    with c1:
-        if st.button("全选", key="select_all_agents"):
-            for k in st.session_state.active_agents.keys():
-                st.session_state.active_agents[k] = True
-    with c2:
-        if st.button("全不选", key="deselect_all_agents"):
-            for k in st.session_state.active_agents.keys():
-                st.session_state.active_agents[k] = False
 
-    selected_count = len([1 for v in st.session_state.active_agents.values() if v])
-    st.sidebar.caption(f"已启用 {selected_count}/15")
-
-    # 分组复选
-    for team_name, agents in _get_agent_groups().items():
-        st.sidebar.markdown(f"**{team_name}**")
-        for agent in agents:
-            display = get_agent_display_name(agent)
-            st.session_state.active_agents[agent] = st.sidebar.checkbox(
-                display,
-                value=st.session_state.active_agents.get(agent, True),
-                key=f"agent_enable_{agent}"
-            )
-    st.sidebar.markdown("---")
-
-
-@st.cache_data(ttl=5)
+@st.cache_data(ttl=15)
 def get_session_files_list():
     """获取会话文件列表"""
     try:
@@ -773,7 +701,7 @@ def load_session_data(json_file_path: str):
         print(f"加载失败: {str(e)}")
 
 
-@st.cache_data(ttl=2)
+@st.cache_data(ttl=5)
 def get_real_analysis_progress():
     """从真实的会话JSON文件获取进度"""
     try:
@@ -827,7 +755,7 @@ def get_real_analysis_progress():
         return None
 
 
-@st.cache_data(ttl=2)
+@st.cache_data(ttl=10)
 def get_all_sessions_progress():
     """扫描所有会话文件，返回进度汇总列表。"""
     sessions_info: List[Dict[str, Any]] = []
@@ -1101,18 +1029,14 @@ def main():
     # 加载样式
     load_page_styles()
     
-    # 应用侧边栏可见性
-    apply_sidebar_visibility()
+    # 不再使用侧边栏，跳过强制可见逻辑
     
-    # 左侧放置显式的开关按钮
-    render_left_sidebar_toggle()
-
     # 显示贴顶抬头（紧贴页面最上方）
     render_top_header()
     
     
-    # 渲染侧边栏：智能体启用开关
-    render_sidebar_agent_selector()
+    # 主页面：智能体启用开关（置于关键操作区之前，便于先选后跑）
+    render_main_agent_selector()
 
     # 采用三段式结构：关键操作区（上）→ 工作区（中）→ 结果与导出（下）
     st.markdown("---")
@@ -1135,8 +1059,7 @@ def main():
         with status_c2:
             st.metric("MCP", mcp_status)
 
-    # 在页面右上角提供侧边栏开关控件
-    render_sidebar_toggle_controls()
+    # 不再渲染顶部侧边栏开关
 
     # 2) 多任务进度总览
     st.markdown("---")
