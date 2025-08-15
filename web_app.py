@@ -215,20 +215,23 @@ def render_debate_round_controls():
         except Exception:
             pass
 
-        inv_rounds = st.slider("投资辩论轮次 (bull/bear)", min_value=0, max_value=10, value=cur_inv, step=1)
-        risk_rounds = st.slider("风险辩论轮次 (激进/保守/中性)", min_value=0, max_value=9, value=cur_risk, step=1)
+        # 从 session_state 获取保存的值，如果没有则使用默认值
+        if 'debate_inv_rounds' not in st.session_state:
+            st.session_state.debate_inv_rounds = cur_inv
+        if 'debate_risk_rounds' not in st.session_state:
+            st.session_state.debate_risk_rounds = cur_risk
 
-        cols = st.columns([1,1,6])
-        with cols[0]:
-            if st.button("应用本次设置", key="apply_debate_rounds"):
-                try:
-                    if st.session_state.get('orchestrator'):
-                        st.session_state.orchestrator.set_debate_rounds(inv_rounds, risk_rounds)
-                        st.success("已应用到本次任务。")
-                    else:
-                        st.warning("系统未连接，稍后自动应用。")
-                except Exception as e:
-                    st.error(f"设置失败: {e}")
+        inv_rounds = st.slider("投资辩论轮次 (bull/bear各发言1次为1轮)", min_value=0, max_value=10, 
+                              value=st.session_state.debate_inv_rounds, step=1, key="slider_inv_rounds")
+        risk_rounds = st.slider("风险辩论轮次 (激进/保守/中性各发言1次为1轮)", min_value=0, max_value=9, 
+                               value=st.session_state.debate_risk_rounds, step=1, key="slider_risk_rounds")
+
+        # 实时保存滑块值到 session_state
+        st.session_state.debate_inv_rounds = inv_rounds
+        st.session_state.debate_risk_rounds = risk_rounds
+
+        # 显示当前设置
+        st.caption(f"💡 当前设置: 投资{inv_rounds}轮 风险{risk_rounds}轮 (开始分析时自动应用)")
 
 
 @st.cache_data(ttl=15)
@@ -927,6 +930,25 @@ def start_analysis(query: str):
         selected_agents = [a for a, enabled in st.session_state.active_agents.items() if enabled]
     except Exception:
         selected_agents = []
+
+    # 获取前端设置的辩论轮次并自动应用
+    try:
+        # 从前端获取当前设置的辩论轮次
+        cur_inv = 3
+        cur_risk = 3
+        if st.session_state.get('orchestrator'):
+            info = st.session_state.orchestrator.get_workflow_info()
+            cur_inv = int(info.get('max_debate_rounds', cur_inv))
+            cur_risk = int(info.get('max_risk_debate_rounds', cur_risk))
+        
+        # 应用辩论轮次设置（如果有设置的话）
+        if 'debate_inv_rounds' in st.session_state and 'debate_risk_rounds' in st.session_state:
+            inv_rounds = st.session_state.debate_inv_rounds
+            risk_rounds = st.session_state.debate_risk_rounds
+            st.session_state.orchestrator.set_debate_rounds(inv_rounds, risk_rounds)
+            print(f"自动应用辩论轮次设置: 投资={inv_rounds}, 风险={risk_rounds}")
+    except Exception as e:
+        print(f"应用辩论轮次设置失败: {e}")
 
     # 重置状态
     st.session_state.analysis_running = True

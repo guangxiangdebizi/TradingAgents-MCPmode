@@ -451,13 +451,21 @@ class WorkflowOrchestrator:
             investment_debate_state = state.investment_debate_state
         count = investment_debate_state.get("count", 0)
         
-        if count < self.max_debate_rounds:
-            # 根据当前轮次决定下一个发言者
-            if count % 2 == 1:  # 奇数轮，看跌研究员发言
+        # 计算当前轮数：每2次发言为1轮
+        current_round = (count + 1) // 2 + ((count + 1) % 2)  # 向上取整
+        
+        print(f"🤔 投资辩论判断: 当前发言次数={count}, 当前轮数={current_round}, 最大轮数={self.max_debate_rounds}")
+        
+        if current_round <= self.max_debate_rounds:
+            # 根据当前次数决定下一个发言者
+            if count % 2 == 1:  # 奇数次，看跌研究员发言
+                print(f"📉 继续投资辩论 - 看跌研究员 (第{current_round}轮)")
                 return "bear_researcher"
-            else:  # 偶数轮，看涨研究员发言
+            else:  # 偶数次，看涨研究员发言
+                print(f"📈 继续投资辩论 - 看涨研究员 (第{current_round}轮)")
                 return "bull_researcher"
         else:
+            print(f"🏁 投资辩论结束({self.max_debate_rounds}轮完成)，进入研究经理")
             return "research_manager"
     
     def _should_continue_risk_debate(self, state) -> str:
@@ -468,16 +476,25 @@ class WorkflowOrchestrator:
             risk_debate_state = state.risk_debate_state
         count = risk_debate_state.get("count", 0)
         
-        if count < self.max_risk_debate_rounds:
+        # 计算当前轮数：每3次发言为1轮
+        current_round = (count + 1) // 3 + ((count + 1) % 3 > 0)  # 向上取整
+        
+        print(f"🤔 风险辩论判断: 当前发言次数={count}, 当前轮数={current_round}, 最大轮数={self.max_risk_debate_rounds}")
+        
+        if current_round <= self.max_risk_debate_rounds:
             # 风险辩论轮次：激进 -> 保守 -> 中性 -> 激进...
             remainder = count % 3
             if remainder == 1:
+                print(f"🛡️ 继续风险辩论 - 保守风险分析师 (第{current_round}轮)")
                 return "safe_risk_analyst"
             elif remainder == 2:
+                print(f"⚖️ 继续风险辩论 - 中性风险分析师 (第{current_round}轮)")
                 return "neutral_risk_analyst"
             else:
+                print(f"⚡ 继续风险辩论 - 激进风险分析师 (第{current_round}轮)")
                 return "aggressive_risk_analyst"
         else:
+            print(f"🏁 风险辩论结束({self.max_risk_debate_rounds}轮完成)，进入风险经理")
             return "risk_manager"
     
     def _check_cancel(self):
@@ -735,9 +752,13 @@ class WorkflowOrchestrator:
     def set_debate_rounds(self, investment_rounds: Optional[int] = None, risk_rounds: Optional[int] = None):
         """设置本轮辩论的最大轮次（立即生效，用于下一次 run_analysis）。"""
         if isinstance(investment_rounds, int) and investment_rounds >= 0:
+            old_inv = self.max_debate_rounds
             self.max_debate_rounds = investment_rounds
+            print(f"🌀 投资辩论轮次已更新: {old_inv} → {investment_rounds}")
         if isinstance(risk_rounds, int) and risk_rounds >= 0:
+            old_risk = self.max_risk_debate_rounds
             self.max_risk_debate_rounds = risk_rounds
+            print(f"🌀 风险辩论轮次已更新: {old_risk} → {risk_rounds}")
 
     def set_active_agents(self, active_agents: List[str]):
         """外部设置本轮启用的智能体集合"""
