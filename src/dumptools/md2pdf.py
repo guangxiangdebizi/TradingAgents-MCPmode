@@ -40,19 +40,22 @@ except ImportError:
 class MarkdownToPDFConverter:
     """Markdown转PDF转换器"""
     
-    def __init__(self, dump_dir: str = "src/dump", include_toc: bool = False):
+    def __init__(self, dump_dir: str = "src/dump", include_toc: bool = False, key_agents_only: bool = False):
         """初始化转换器
         
         Args:
             dump_dir: dump文件夹路径
+            include_toc: 是否包含目录
+            key_agents_only: 是否只导出关键智能体
         """
         self.dump_dir = Path(dump_dir)
+        self.key_agents_only = key_agents_only
         # 输出到 dumptools/pdf_reports/ 目录
         self.output_dir = Path(__file__).parent / "pdf_reports"
         self.output_dir.mkdir(exist_ok=True)
         
         # 初始化Markdown转换器
-        self.md_converter = JSONToMarkdownConverter(str(self.dump_dir))
+        self.md_converter = JSONToMarkdownConverter(str(self.dump_dir), key_agents_only=self.key_agents_only)
         
         # 注册字体
         self._register_fonts()
@@ -628,7 +631,10 @@ class MarkdownToPDFConverter:
             
             # 生成PDF文件名
             json_filename = Path(json_file_path).stem
-            pdf_file = self.output_dir / f"{json_filename}.pdf"
+            if self.key_agents_only:
+                pdf_file = self.output_dir / f"{json_filename}_关键分析.pdf"
+            else:
+                pdf_file = self.output_dir / f"{json_filename}.pdf"
             
             # 创建带 TOC 支持的 PDF 文档
             doc = self._TOCDocTemplate(

@@ -16,16 +16,25 @@ import re
 class JSONToMarkdownConverter:
     """JSON转Markdown转换器"""
     
-    def __init__(self, dump_dir: str = "src/dump", include_mcp_calls: bool = False):
+    def __init__(self, dump_dir: str = "src/dump", include_mcp_calls: bool = False, key_agents_only: bool = False):
         """初始化转换器
         
         Args:
             dump_dir: dump文件夹路径
             include_mcp_calls: 是否在Markdown中包含MCP工具调用信息（默认关闭）
+            key_agents_only: 是否只导出关键智能体（研究经理、交易员、风险经理）
         """
         self.dump_dir = Path(dump_dir)
         self.output_dir = Path("markdown_reports")
         self.include_mcp_calls = include_mcp_calls
+        self.key_agents_only = key_agents_only
+        
+        # 定义关键智能体列表
+        self.key_agent_names = {
+            'research_manager',  # 研究经理
+            'trader',           # 交易员
+            'risk_manager'      # 风险经理
+        }
         
         # 确保输出目录存在
         self.output_dir.mkdir(exist_ok=True)
@@ -49,7 +58,10 @@ class JSONToMarkdownConverter:
             
             # 生成输出文件名
             json_filename = Path(json_file_path).stem
-            output_file = self.output_dir / f"{json_filename}.md"
+            if self.key_agents_only:
+                output_file = self.output_dir / f"{json_filename}_关键分析.md"
+            else:
+                output_file = self.output_dir / f"{json_filename}.md"
             
             # 写入Markdown文件
             with open(output_file, 'w', encoding='utf-8') as f:
@@ -266,6 +278,11 @@ class JSONToMarkdownConverter:
         if 'agents' in data and data['agents']:
             # 过滤出status为completed的智能体
             completed_agents = [agent for agent in data['agents'] if agent.get('status') == 'completed']
+            
+            # 如果启用关键智能体模式，进一步过滤
+            if self.key_agents_only:
+                completed_agents = [agent for agent in completed_agents 
+                                  if agent.get('agent_name') in self.key_agent_names]
             
             if completed_agents:
                 # 获取MCP调用数据（可开关，默认不包含）

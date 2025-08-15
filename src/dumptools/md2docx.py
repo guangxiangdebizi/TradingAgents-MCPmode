@@ -36,19 +36,21 @@ except ImportError:
 class MarkdownToDocxConverter:
     """Markdown转DOCX转换器"""
     
-    def __init__(self, dump_dir: str = "src/dump"):
+    def __init__(self, dump_dir: str = "src/dump", key_agents_only: bool = False):
         """初始化转换器
         
         Args:
             dump_dir: dump文件夹路径
+            key_agents_only: 是否只导出关键智能体
         """
         self.dump_dir = Path(dump_dir)
+        self.key_agents_only = key_agents_only
         # 输出到 dumptools/docx_reports/ 目录
         self.output_dir = Path(__file__).parent / "docx_reports"
         self.output_dir.mkdir(exist_ok=True)
         
         # 初始化Markdown转换器
-        self.md_converter = JSONToMarkdownConverter(str(self.dump_dir))
+        self.md_converter = JSONToMarkdownConverter(str(self.dump_dir), key_agents_only=self.key_agents_only)
         
         # 目录项列表
         self.toc_entries = []
@@ -344,7 +346,10 @@ class MarkdownToDocxConverter:
             
             # 生成DOCX文件名
             json_filename = Path(json_file_path).stem
-            docx_file = self.output_dir / f"{json_filename}.docx"
+            if self.key_agents_only:
+                docx_file = self.output_dir / f"{json_filename}_关键分析.docx"
+            else:
+                docx_file = self.output_dir / f"{json_filename}.docx"
             
             # 保存文档
             doc.save(str(docx_file))

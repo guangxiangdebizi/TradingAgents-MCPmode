@@ -549,25 +549,44 @@ def show_history_management():
 
 
 def show_export_options():
-    """导出选项 - 超简化版本"""
+    """导出选项 - 包含完整版和关键分析版"""
     if not st.session_state.current_session_data or not st.session_state.selected_session_file:
         st.info("请先加载会话数据")
         return
     
-    # 简化的导出按钮
+    # 完整版导出
+    st.markdown("**📄 完整报告导出**")
     export_col1, export_col2, export_col3 = st.columns(3)
     
     with export_col1:
-        if st.button("📄 导出MD", key="export_md_simple"):
-            export_to_markdown()
+        if st.button("📄 导出MD", key="export_md_full"):
+            export_to_markdown(key_agents_only=False)
     
     with export_col2:
-        if st.button("📄 导出PDF", key="export_pdf_simple"):
-            export_to_pdf()
+        if st.button("📄 导出PDF", key="export_pdf_full"):
+            export_to_pdf(key_agents_only=False)
     
     with export_col3:
-        if st.button("📄 导出Word", key="export_word_simple"):
-            export_to_docx()
+        if st.button("📄 导出Word", key="export_word_full"):
+            export_to_docx(key_agents_only=False)
+    
+    st.markdown("---")
+    
+    # 关键分析导出
+    st.markdown("**🎯 关键分析导出** (仅研究经理、交易员、风险经理)")
+    key_col1, key_col2, key_col3 = st.columns(3)
+    
+    with key_col1:
+        if st.button("🎯 关键MD", key="export_md_key"):
+            export_to_markdown(key_agents_only=True)
+    
+    with key_col2:
+        if st.button("🎯 关键PDF", key="export_pdf_key"):
+            export_to_pdf(key_agents_only=True)
+    
+    with key_col3:
+        if st.button("🎯 关键Word", key="export_word_key"):
+            export_to_docx(key_agents_only=True)
 
 
 def show_analysis_results():
@@ -641,17 +660,18 @@ def show_agent_result(agent: Dict[str, Any]):
 
 
 # 导出功能
-def export_to_markdown():
+def export_to_markdown(key_agents_only: bool = False):
     """导出Markdown"""
     if not JSONToMarkdownConverter:
         st.error("❌ Markdown导出器不可用")
         return
     
     try:
-        converter = JSONToMarkdownConverter("src/dump")
+        converter = JSONToMarkdownConverter("src/dump", key_agents_only=key_agents_only)
         result = converter.convert_json_to_markdown(st.session_state.selected_session_file)
         if result and os.path.exists(result):
-            st.success(f"✅ Markdown导出成功: {result}")
+            export_type = "关键分析" if key_agents_only else "完整"
+            st.success(f"✅ {export_type}Markdown导出成功: {result}")
             
             # 提供下载链接
             with open(result, 'r', encoding='utf-8') as f:
@@ -669,17 +689,18 @@ def export_to_markdown():
         st.error(f"❌ 导出错误: {str(e)}")
 
 
-def export_to_pdf():
+def export_to_pdf(key_agents_only: bool = False):
     """导出PDF"""
     if not MarkdownToPDFConverter:
         st.error("❌ PDF导出器不可用")
         return
     
     try:
-        converter = MarkdownToPDFConverter("src/dump", include_toc=True)
+        converter = MarkdownToPDFConverter("src/dump", include_toc=True, key_agents_only=key_agents_only)
         result = converter.convert_json_to_pdf_via_markdown(st.session_state.selected_session_file)
         if result and os.path.exists(result):
-            st.success(f"✅ PDF导出成功: {result}")
+            export_type = "关键分析" if key_agents_only else "完整"
+            st.success(f"✅ {export_type}PDF导出成功: {result}")
             
             # 提供下载链接
             with open(result, 'rb') as f:
@@ -697,17 +718,18 @@ def export_to_pdf():
         st.error(f"❌ PDF导出错误: {str(e)}")
 
 
-def export_to_docx():
+def export_to_docx(key_agents_only: bool = False):
     """导出Word文档"""
     if not MarkdownToDocxConverter:
         st.error("❌ DOCX导出器不可用")
         return
     
     try:
-        converter = MarkdownToDocxConverter("src/dump")
+        converter = MarkdownToDocxConverter("src/dump", key_agents_only=key_agents_only)
         result = converter.convert_json_to_docx_via_markdown(st.session_state.selected_session_file)
         if result and os.path.exists(result):
-            st.success(f"✅ DOCX导出成功: {result}")
+            export_type = "关键分析" if key_agents_only else "完整"
+            st.success(f"✅ {export_type}DOCX导出成功: {result}")
             
             # 提供下载链接
             with open(result, 'rb') as f:
