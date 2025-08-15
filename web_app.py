@@ -198,15 +198,16 @@ def render_main_agent_selector():
         
         with c3:
             selected_count = len([1 for v in checkbox_states.values() if v])
-            st.caption(f"已启用 {selected_count}/15")
+            total_count = len(checkbox_states)
+            st.caption(f"已启用 {selected_count}/{total_count}")
 
 
 def render_debate_round_controls():
     """主页面：辩论轮次配置（投资辩论与风险辩论）。"""
     with st.expander("🌀 辩论轮次设置", expanded=False):
         # 从已连接的 orchestrator 获取当前默认值
-        cur_inv = 3
-        cur_risk = 3
+        cur_inv = 1
+        cur_risk = 1
         try:
             if st.session_state.get('orchestrator'):
                 info = st.session_state.orchestrator.get_workflow_info()
@@ -352,19 +353,31 @@ def show_system_overview():
         with col1:
             mcp_info = capabilities.get('mcp_tools_info', {})
             total_tools = mcp_info.get('total_tools', 0)
-            st.metric("🔧 MCP工具总数", total_tools if total_tools > 0 else "连接中...")
+            if total_tools > 0:
+                st.metric("🔧 MCP工具总数", total_tools)
+            else:
+                st.metric("🔧 MCP工具总数", "未连接")
         
         with col2:
             server_count = mcp_info.get('server_count', 0)
-            st.metric("🖥️ MCP服务器", server_count if server_count > 0 else "1")
+            if server_count > 0:
+                st.metric("🖥️ MCP服务器", server_count)
+            else:
+                st.metric("🖥️ MCP服务器", "未检测")
         
         with col3:
             agents_count = capabilities.get('agents_count', 0)
-            st.metric("🤖 智能体总数", agents_count if agents_count > 0 else "15")
+            if agents_count > 0:
+                st.metric("🤖 智能体总数", agents_count)
+            else:
+                st.metric("🤖 智能体总数", "未知")
         
         with col4:
             enabled_agents = len([agent for agent, enabled in mcp_info.get('agent_permissions', {}).items() if enabled])
-            st.metric("✅ 启用MCP权限", enabled_agents if enabled_agents > 0 else "9")
+            if enabled_agents > 0:
+                st.metric("✅ 启用MCP权限", enabled_agents)
+            else:
+                st.metric("✅ 启用MCP权限", "未配置")
         
         # 显示详细工具信息
         if total_tools > 0:
@@ -419,17 +432,8 @@ def show_system_overview():
                         agent_display = get_agent_display_name(agent)
                         st.markdown(f"{status} {agent_display}", help=f"{agent}: {'启用' if permissions.get(agent, False) else '禁用'}")
     else:
-        # 如果无法获取系统信息，显示基本信息
-        st.info("🔄 正在初始化系统...")
-        col1, col2, col3, col4 = st.columns(4)
-        with col1:
-            st.metric("🤖 智能体总数", "15")
-        with col2:
-            st.metric("✅ 启用MCP权限", "9")
-        with col3:
-            st.metric("🔧 MCP工具数", "检测中...")
-        with col4:
-            st.metric("🖥️ MCP服务器", "1")
+        # 如果无法获取系统信息，显示简化的状态信息
+        st.info("🔄 正在初始化系统，请稍候...")
     
     st.markdown("---")
 
@@ -934,8 +938,8 @@ def start_analysis(query: str):
     # 获取前端设置的辩论轮次并自动应用
     try:
         # 从前端获取当前设置的辩论轮次
-        cur_inv = 3
-        cur_risk = 3
+        cur_inv = 1
+        cur_risk = 1
         if st.session_state.get('orchestrator'):
             info = st.session_state.orchestrator.get_workflow_info()
             cur_inv = int(info.get('max_debate_rounds', cur_inv))
