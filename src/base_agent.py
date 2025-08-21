@@ -120,6 +120,14 @@ class BaseAgent(ABC):
         if trader_investment_plan:
             context_parts.append(f"交易员计划: {trader_investment_plan}")
         
+        # 量化策略计划
+        if isinstance(state, dict):
+            quant_strategy_plan = state.get('quant_strategy_plan', '')
+        else:
+            quant_strategy_plan = getattr(state, 'quant_strategy_plan', '')
+        if quant_strategy_plan:
+            context_parts.append(f"量化策略计划: {quant_strategy_plan}")
+        
         return "\n\n".join(context_parts)
     
     def build_analyst_context_prompt(self, state: AgentState) -> str:

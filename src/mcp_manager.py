@@ -95,6 +95,7 @@ class MCPManager:
             "bear_researcher": "BEAR_RESEARCHER_MCP_ENABLED",
             "research_manager": "RESEARCH_MANAGER_MCP_ENABLED",
             "trader": "TRADER_MCP_ENABLED",
+            "quantitative_trader": "QUANTITATIVE_TRADER_MCP_ENABLED",
             "aggressive_risk_analyst": "AGGRESSIVE_RISK_ANALYST_MCP_ENABLED",
             "safe_risk_analyst": "SAFE_RISK_ANALYST_MCP_ENABLED",
             "neutral_risk_analyst": "NEUTRAL_RISK_ANALYST_MCP_ENABLED",

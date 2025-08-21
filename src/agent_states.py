@@ -46,6 +46,7 @@ class AgentState(MessagesState):
     
     # 交易员决策
     trader_investment_plan: str = ""  # 交易员投资计划
+    quant_strategy_plan: str = ""  # 量化交易员输出的量化策略逻辑
     
     # 风险管理辩论状态
     risk_debate_state: Dict[str, Any] = {}
