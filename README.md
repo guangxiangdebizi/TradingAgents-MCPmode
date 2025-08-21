@@ -4,11 +4,11 @@
 
 ## 🌟 项目概述
 
-**TradingAgents-MCPmode** 是一个创新的多智能体交易分析系统，集成了 Model Context Protocol (MCP) 工具，实现了智能化的股票分析和交易决策流程。系统通过16个专业化智能体的协作，提供全面的市场分析、投资建议和风险管理。
+**TradingAgents-MCPmode** 是一个创新的多智能体交易分析系统，集成了 Model Context Protocol (MCP) 工具，实现了智能化的股票分析和交易决策流程。系统通过15个专业化智能体的协作，提供全面的市场分析、投资建议和风险管理。
 
 ### 🎯 核心特性
 
-- **🤖 多智能体协作**: 16个专业化智能体分工合作
+- **🤖 多智能体协作**: 15个专业化智能体分工合作
 - **⚡ 并行处理**: 分析师团队采用并行架构，显著提升分析效率
 - **🔧 MCP工具集成**: 支持外部数据源和实时信息获取
 - **📊 全面分析**: 公司概述、市场、情绪、新闻、基本面、股东结构、产品业务七维度分析
@@ -44,9 +44,8 @@
 │  └── BearResearcher     (看跌研究员)                        │
 ├─────────────────────────────────────────────────────────────┤
 │  👔 管理层 (Managers)                                       │
-│  ├── ResearchManager        (研究经理)                      │
-│  ├── Trader                 (交易员)                        │
-│  └── QuantitativeTrader     (量化交易员)                    │
+│  ├── ResearchManager    (研究经理)                          │
+│  └── Trader             (交易员)                            │
 ├─────────────────────────────────────────────────────────────┤
 │  ⚠️ 风险管理团队 (Risk Management)                          │
 │  ├── AggressiveRiskAnalyst (激进风险分析师)                 │
@@ -56,7 +55,7 @@
 └─────────────────────────────────────────────────────────────┘
 ```
 
-### 🚀 并行化工作流程（含量化交易员并发）
+### 🚀 并行化工作流程
 
 ```mermaid
 graph TD
@@ -84,7 +83,6 @@ graph TD
     %% 第3阶段：管理层
     C1[🎯 研究经理<br/>📥 输入：user_query + 全部7个分析师报告 + 完整辩论历史<br/>📤 输出：investment_plan]
     C2[💰 交易员<br/>📥 输入：user_query + 全部7个分析师报告 + 辩论历史 + investment_plan<br/>📤 输出：trader_investment_plan]
-    Q[📐 量化交易员<br/>📥 输入：trader_investment_plan<br/>📤 输出：quant_strategy_plan]
     
     %% 第4阶段：风险管理团队
     D1[🔥 激进风险分析师<br/>📥 输入：全部信息<br/>📤 输出：激进风险观点 + 风险辩论历史]
@@ -101,14 +99,12 @@ graph TD
     B1 --> C1
     C1 --> C2
     C2 --> D1
-    C2 -.->|并发| Q
     D1 -.->|风险辩论循环| D2
     D2 -.->|风险辩论循环| D3
     D3 -.->|风险辩论循环| D1
     D1 --> D4
     D2 --> D4
     D3 --> D4
-    Q --> D4
     
     %% 并行节点内部连接（虚线表示并发）
     PARALLEL -.-> A1
@@ -286,7 +282,7 @@ python main.py
    - ✅ 研究员团队: 仅选择看涨研究员
    - ❌ 管理层: 全不选 (快速分析)
    - ❌ 风险管理: 全不选 (快速分析)
-   - 📊 显示: 已启用 8/16
+   - 📊 显示: 已启用 8/15
 
 3. **设置辩论轮次** (在"🌀 辩论轮次设置"展开):
    - 🔄 投资辩论轮次: 1轮 (仅看涨研究员发言1次)
@@ -316,12 +312,10 @@ python main.py
 在 `.env` 文件中配置以下参数：
 
 ```env
-# 大模型配置（从环境变量加载）
-LLM_API_KEY=your_api_key_here
-LLM_BASE_URL=https://api.openai.com/v1
-LLM_MODEL=gpt-4
-LLM_TEMPERATURE=0.1
-LLM_MAX_TOKENS=4000
+# 大模型配置
+OPENAI_API_KEY=your_openai_api_key
+OPENAI_BASE_URL=https://api.openai.com/v1
+MODEL_NAME=gpt-4
 
 # 工作流配置
 MAX_DEBATE_ROUNDS=1           # 投资辩论默认轮次（可在前端动态调整）
@@ -329,26 +323,27 @@ MAX_RISK_DEBATE_ROUNDS=1      # 风险辩论默认轮次（可在前端动态调
 DEBUG_MODE=true               # 调试模式，显示详细日志
 VERBOSE_LOGGING=true          # 详细日志输出
 
-# 智能体MCP权限配置（对应 *_MCP_ENABLED）
+# 智能体MCP权限配置
 # 分析师团队 - 建议开启MCP以获取实时数据
-COMPANY_OVERVIEW_ANALYST_MCP_ENABLED=true
-MARKET_ANALYST_MCP_ENABLED=true
-SENTIMENT_ANALYST_MCP_ENABLED=true
-NEWS_ANALYST_MCP_ENABLED=true
-FUNDAMENTALS_ANALYST_MCP_ENABLED=true
-SHAREHOLDER_ANALYST_MCP_ENABLED=true
-PRODUCT_ANALYST_MCP_ENABLED=true
+COMPANY_OVERVIEW_ANALYST_MCP=true
+MARKET_ANALYST_MCP=true
+SENTIMENT_ANALYST_MCP=true
+NEWS_ANALYST_MCP=true
+FUNDAMENTALS_ANALYST_MCP=true
+SHAREHOLDER_ANALYST_MCP=true
+PRODUCT_ANALYST_MCP=true
 
-# 研究员/管理/风险团队 - 一般关闭MCP，专注综合推理
-BULL_RESEARCHER_MCP_ENABLED=false
-BEAR_RESEARCHER_MCP_ENABLED=false
-RESEARCH_MANAGER_MCP_ENABLED=false
-TRADER_MCP_ENABLED=false
-QUANTITATIVE_TRADER_MCP_ENABLED=false
-AGGRESSIVE_RISK_ANALYST_MCP_ENABLED=false
-SAFE_RISK_ANALYST_MCP_ENABLED=false
-NEUTRAL_RISK_ANALYST_MCP_ENABLED=false
-RISK_MANAGER_MCP_ENABLED=false
+# 研究员/管理/风险团队 - 建议关闭MCP专注综合分析
+BULL_RESEARCHER_MCP=false
+BEAR_RESEARCHER_MCP=false
+RESEARCH_MANAGER_MCP=false
+TRADER_MCP=false
+AGGRESSIVE_RISK_ANALYST_MCP=false
+SAFE_RISK_ANALYST_MCP=false
+NEUTRAL_RISK_ANALYST_MCP=false
+RISK_MANAGER_MCP=false
+
+# 任务数量并发限制
 MAX_CONCURRENT_ANALYSIS=2     # 同时运行的分析任务数量
 ```
 

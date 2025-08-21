@@ -146,7 +146,16 @@ class Trader(BaseAgent):
 - 交易成本和滑点
 - 市场时间和交易窗口
 
-请制定专业的交易执行计划。
+额外输出（量化伪代码）：
+- 在自然语言交易计划之后，必须追加一段“量化伪代码”，用以精确描述交易逻辑，便于量化实现。
+- 伪代码必须包括：输入数据与参数定义、指标计算、入场/出场条件、仓位管理、风险控制（止损/止盈/最大回撤/移动止损）、执行节奏与监控、返回值规范。
+- 使用清晰的函数与变量命名，中文注释，结构化且可直接据此落地实现。
+- 建议函数划分：compute_indicators(), generate_signals(), position_sizing(), risk_controls(), execute_order(), main_loop()
+- 输出中请包含关键参数（如均线周期、RSI阈值、资金利用率、最大单笔风险比例、滑点/交易费率假设等）。
+
+```
+
+请先给出专业的自然语言交易执行计划，再紧跟输出符合上述规范的量化伪代码。
 """
     
     async def process(self, state: AgentState, progress_tracker=None) -> AgentState:
@@ -207,80 +216,5 @@ class Trader(BaseAgent):
             else:
                 state.add_error(error_msg)
                 state.trader_investment_plan = f"交易计划制定出现错误: {error_msg}"
-        
-        return state
-
-
-class QuantitativeTrader(BaseAgent):
-    """量化交易员 - 将交易员输出转化为量化可执行的策略逻辑"""
-    
-    def __init__(self, mcp_manager: MCPManager):
-        super().__init__(
-            agent_name="quantitative_trader",
-            mcp_manager=mcp_manager,
-            role_description="量化交易员，基于交易员计划产出量化策略逻辑（信号、因子、风控、回测框架）"
-        )
-    
-    def get_system_prompt(self, state: AgentState) -> str:
-        current_datetime = datetime.now()
-        return f"""
-你是一位资深的量化交易员。你的任务是：基于交易员的文字版交易计划，抽取并固化为可执行的量化策略逻辑。
-
-当前时间：{current_datetime.strftime('%Y年%m月%d日 %H:%M:%S')} ({current_datetime.strftime('%A')})
-
-输出必须包含：
-1) 策略框架：频率（日/小时/分钟）、标的范围（单票/多票/指数/行业）、数据依赖（行情/财务/新闻/情绪等）
-2) 信号与因子：
-   - 技术面（MA/EMA/MACD/RSI/KDJ/布林带/成交量指标等）的明确参数与阈值
-   - 基本面或量价特征：选股/择时的因子定义、标准化/去极值/行业中性化处理
-3) 交易规则：开仓/加仓/减仓/平仓条件；仓位管理；多空条件（若适用）
-4) 风险控制：止损/止盈、波动率目标、最大回撤约束、单票/行业/整体风控、持仓上限
-5) 执行细节：撮合方式、滑点与冲击成本假设、盘中与收盘信号差异
-6) 回测设计：
-   - 时间区间、滚动窗口、步长
-   - 指标：年化收益、波动率、夏普、卡玛、最大回撤、胜率/盈亏比、因子IC/ICIR
-7) 伪代码/公式：用清晰步骤或伪代码描述核心计算与交易流程（便于工程落地）
-
-请严格从交易员计划中抽取意图与逻辑，不要臆造与其相矛盾的设定；若交易员计划缺失关键信息，请做“保守合理默认值”的补全，并在“假设与默认”段落显式列出。
-"""
-    
-    async def process(self, state: AgentState, progress_tracker=None) -> AgentState:
-        """将交易员文本计划转化为量化策略逻辑"""
-        # 兼容 dict/对象两种状态
-        user_query = state.get('user_query', '') if isinstance(state, dict) else state.user_query
-        if isinstance(state, dict):
-            trader_plan = state.get('trader_investment_plan', '')
-        else:
-            trader_plan = state.trader_investment_plan
-        
-        if not self.validate_state(state):
-            return state
-        
-        try:
-            request = f"""
-基于以下交易员计划，为用户问题 "{user_query}" 产出“量化可执行策略逻辑”说明书：
-
-交易员计划：
-{trader_plan}
-
-请给出完整、结构化且可落地的量化策略描述（含因子定义、参数、规则、风控、回测与伪代码）。
-"""
-            result = await self.call_llm_with_context(state, request, progress_tracker)
-            formatted = self.format_output(result, state)
-            if isinstance(state, dict):
-                state['quant_strategy_plan'] = formatted
-            else:
-                state.quant_strategy_plan = formatted
-        except Exception as e:
-            error_msg = f"量化策略生成失败: {str(e)}"
-            print(f"❌ {error_msg}")
-            if isinstance(state, dict):
-                if 'errors' not in state:
-                    state['errors'] = []
-                state['errors'].append(error_msg)
-                state['quant_strategy_plan'] = f"量化策略生成出现错误: {error_msg}"
-            else:
-                state.add_error(error_msg)
-                state.quant_strategy_plan = f"量化策略生成出现错误: {error_msg}"
         
         return state

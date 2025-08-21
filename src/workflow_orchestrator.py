@@ -12,7 +12,7 @@ from .agents.analysts import (
     CompanyOverviewAnalyst, MarketAnalyst, SentimentAnalyst, NewsAnalyst, FundamentalsAnalyst, ShareholderAnalyst, ProductAnalyst
 )
 from .agents.researchers import BullResearcher, BearResearcher
-from .agents.managers import ResearchManager, Trader, QuantitativeTrader
+from .agents.managers import ResearchManager, Trader
 from .agents.risk_management import (
     AggressiveRiskAnalyst, SafeRiskAnalyst, NeutralRiskAnalyst, RiskManager
 )
@@ -46,9 +46,6 @@ class WorkflowOrchestrator:
         # 本轮启用的智能体集合（为空表示默认启用全部）
         self.active_agents: Set[str] = set()
         
-        # 并发：量化交易员后台任务
-        self._quant_task = None
-        
         print("🚀 工作流编排器初始化完成")
     
     def _initialize_agents(self) -> Dict[str, Any]:
@@ -70,7 +67,6 @@ class WorkflowOrchestrator:
             # 管理层
             "research_manager": ResearchManager(self.mcp_manager),
             "trader": Trader(self.mcp_manager),
-            "quantitative_trader": QuantitativeTrader(self.mcp_manager),
             
             # 风险管理团队
             "aggressive_risk_analyst": AggressiveRiskAnalyst(self.mcp_manager),
@@ -141,7 +137,6 @@ class WorkflowOrchestrator:
         workflow.add_edge("research_manager", "trader")
         
         # 第四阶段：风险管理辩论
-        # 在交易员之后启动风险辩论；量化交易员作为后台任务并发执行（不通过状态图分叉）。
         workflow.add_edge("trader", "aggressive_risk_analyst")
         workflow.add_conditional_edges(
             "aggressive_risk_analyst",
@@ -393,17 +388,6 @@ class WorkflowOrchestrator:
             self._check_cancel()
             return state
         result = await self.agents["trader"].process(state, self.progress_manager)
-        
-        # 在交易员完成后，后台启动量化交易员并发任务（使用深拷贝避免竞态）
-        try:
-            import copy, asyncio as _asyncio
-            state_copy = copy.deepcopy(result)
-            self._quant_task = _asyncio.create_task(
-                self.agents["quantitative_trader"].process(state_copy, self.progress_manager)
-            )
-            print("🚀 已启动量化交易员后端任务")
-        except Exception as _:
-            self._quant_task = None
         self._check_cancel()
         return result
 
@@ -454,35 +438,6 @@ class WorkflowOrchestrator:
             self._skip_agent("risk_manager")
             self._check_cancel()
             return state
-        # 风险经理开始前，如量化任务已启动则先等待其完成并把量化产出合并到 state，
-        # 以便风险经理在上下文中可见量化策略。
-        try:
-            if self._quant_task is not None:
-                print("⏳ 在进入风险经理前等待量化交易员任务完成…")
-                quant_result = await self._quant_task
-                # 合并量化策略与相关历史
-                def _get(obj, key, default=""):
-                    return obj.get(key, default) if isinstance(obj, dict) else getattr(obj, key, default)
-                quant_plan = _get(quant_result, 'quant_strategy_plan', '')
-                if quant_plan:
-                    if isinstance(state, dict):
-                        state['quant_strategy_plan'] = quant_plan
-                    else:
-                        setattr(state, 'quant_strategy_plan', quant_plan)
-                for hkey in ["mcp_tool_calls", "agent_execution_history", "warnings", "errors"]:
-                    qv = _get(quant_result, hkey, [])
-                    if qv:
-                        if isinstance(state, dict):
-                            if hkey not in state or not isinstance(state[hkey], list):
-                                state[hkey] = []
-                            state[hkey].extend(qv)
-                        else:
-                            rv = getattr(state, hkey, []) or []
-                            rv.extend(qv)
-                            setattr(state, hkey, rv)
-        except Exception as _:
-            pass
-        
         result = await self.agents["risk_manager"].process(state, self.progress_manager)
         self._check_cancel()
         return result
@@ -614,12 +569,8 @@ class WorkflowOrchestrator:
                     news_report=workflow_result.get('news_report', ''),
                     fundamentals_report=workflow_result.get('fundamentals_report', ''),
                     shareholder_report=workflow_result.get('shareholder_report', ''),  # 添加这一行
-                    product_report=workflow_result.get('product_report', ''),
-                    company_overview_report=workflow_result.get('company_overview_report', ''),
-                    company_details=workflow_result.get('company_details', ''),
                     investment_plan=workflow_result.get('investment_plan', ''),
                     trader_investment_plan=workflow_result.get('trader_investment_plan', ''),
-                    quant_strategy_plan=workflow_result.get('quant_strategy_plan', ''),
                     final_trade_decision=workflow_result.get('final_trade_decision', ''),
                     errors=workflow_result.get('errors', []),
                     warnings=workflow_result.get('warnings', []),
