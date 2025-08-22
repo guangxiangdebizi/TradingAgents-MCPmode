@@ -145,15 +145,6 @@ class Trader(BaseAgent):
 - 当前市场流动性状况
 - 交易成本和滑点
 - 市场时间和交易窗口
-
-额外输出（量化伪代码）：
-- 在自然语言交易计划之后，必须追加一段“量化伪代码”，用以精确描述交易逻辑，便于量化实现。
-- 伪代码必须包括：输入数据与参数定义、指标计算、入场/出场条件、仓位管理、风险控制（止损/止盈/最大回撤/移动止损）、执行节奏与监控、返回值规范。
-- 使用清晰的函数与变量命名，中文注释，结构化且可直接据此落地实现。
-- 建议函数划分：compute_indicators(), generate_signals(), position_sizing(), risk_controls(), execute_order(), main_loop()
-- 输出中请包含关键参数（如均线周期、RSI阈值、资金利用率、最大单笔风险比例、滑点/交易费率假设等）。
-
-请先给出专业的自然语言交易执行计划，再紧跟输出符合上述规范的量化伪代码。
 """
     
     async def process(self, state: AgentState, progress_tracker=None) -> AgentState:
