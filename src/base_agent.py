@@ -169,6 +169,11 @@ class BaseAgent(ABC):
                     if hasattr(progress_tracker, 'start_agent'):
                         # 构建系统提示和上下文信息
                         system_prompt = self.get_system_prompt(state)
+                        # 全局输出格式规范：连续段落，不使用标题符号/项目符号/编号
+                        system_prompt = (
+                            system_prompt
+                            + "\n\n输出格式要求：请将本次输出写成一篇完整的说明文，使用连续段落表述，不要使用标题符号（如##）、项目符号或编号，保持逻辑清晰、语言连贯。若需输出代码/伪代码，可使用代码块，不受上述限制。"
+                        )
                         is_analyst = self.agent_name.endswith('_analyst')
                         if is_analyst:
                             context_prompt = self.build_analyst_context_prompt(state)
@@ -197,6 +202,11 @@ class BaseAgent(ABC):
             # 构建系统提示和上下文（如果之前没有构建的话）
             if 'system_prompt' not in locals():
                 system_prompt = self.get_system_prompt(state)
+                # 全局输出格式规范：连续段落，不使用标题符号/项目符号/编号
+                system_prompt = (
+                    system_prompt
+                    + "\n\n输出格式要求：请将本次输出写成一篇完整的说明文，使用连续段落表述，不要使用标题符号（如##）、项目符号或编号，保持逻辑清晰、语言连贯。若需输出代码/伪代码，可使用代码块，不受上述限制。"
+                )
             if 'context_prompt' not in locals():
                 # 检查是否是分析师，如果是则使用专门的分析师上下文
                 is_analyst = self.agent_name.endswith('_analyst')

@@ -153,8 +153,6 @@ class Trader(BaseAgent):
 - 建议函数划分：compute_indicators(), generate_signals(), position_sizing(), risk_controls(), execute_order(), main_loop()
 - 输出中请包含关键参数（如均线周期、RSI阈值、资金利用率、最大单笔风险比例、滑点/交易费率假设等）。
 
-```
-
 请先给出专业的自然语言交易执行计划，再紧跟输出符合上述规范的量化伪代码。
 """
     
