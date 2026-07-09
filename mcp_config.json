@@ -1,4 +1,21 @@
 {
+  "servers": {
+    "finance-mcp": {
+      "disabled": false,
+      "timeout": 600,
+      "transport": "streamable_http",
+      "url": "https://finvestai.top/mcp",
+      "headers": {
+        "X-Tushare-Token": "您的tushare令牌"
+      }
+    },
+    "fxmacrodata": {
+      "disabled": false,
+      "timeout": 600,
+      "transport": "streamable_http",
+      "url": "https://mcp.fxmacrodata.com"
+    }
+  },
   "mcpServers": {
     "finance-mcp": {
       "disabled": false,
@@ -8,6 +25,12 @@
       "headers": {
         "X-Tushare-Token": "您的tushare令牌"
       }
+    },
+    "fxmacrodata": {
+      "disabled": false,
+      "timeout": 600,
+      "transport": "streamable_http",
+      "url": "https://mcp.fxmacrodata.com"
     }
   }
 }
