@@ -180,12 +180,15 @@ cp env.example .env
 # 编辑 mcp_config.json 文件，配置MCP服务器
 ```
 
-示例配置已包含 FXMacroData 远程 MCP 服务器：
+示例配置包含一个默认禁用的 FXMacroData 远程 MCP 服务器。需要宏观数据时，
+将 `disabled` 改为 `false`；服务端会通过 MCP 工具发现提供可用能力，项目本身
+不复制或维护 FXMacroData 的工具模式。
 
 ```json
 {
-  "servers": {
+  "mcpServers": {
     "fxmacrodata": {
+      "disabled": true,
       "transport": "streamable_http",
       "url": "https://mcp.fxmacrodata.com",
       "timeout": 600
@@ -194,8 +197,9 @@ cp env.example .env
 }
 ```
 
-启用相关智能体的 MCP 权限后，可使用宏观日历、指标、FX、COT、商品、
-市场时段和央行新闻工具来补充交易分析。
+启用该服务器和相关智能体的 MCP 权限后，可使用服务端公开的宏观日历、
+指标、FX、COT、商品、市场时段和央行新闻工具来补充交易分析。该远程
+服务器不需要把 FXMacroData API 密钥写入本仓库的配置文件。
 
 ### 🌐 Web前端使用
 

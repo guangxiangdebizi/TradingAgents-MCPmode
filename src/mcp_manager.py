@@ -7,6 +7,7 @@ from langchain_mcp_adapters.client import MultiServerMCPClient
 from langchain_openai import ChatOpenAI
 from langgraph.prebuilt import create_react_agent
 from dotenv import load_dotenv
+from src.mcp_config import active_servers, configured_servers
 # from loguru import logger  # 已移除
 
 
@@ -120,7 +121,11 @@ class MCPManager:
                 await self.close()
             
             # 使用配置创建MCP客户端
-            config = mcp_config or self.config.get("servers", {})
+            if mcp_config is None:
+                servers = configured_servers(self.config)
+            else:
+                servers = mcp_config
+            config = active_servers(servers)
             if not config:
                 print("⚠️ 未找到MCP服务器配置，跳过MCP初始化")
                 return False
