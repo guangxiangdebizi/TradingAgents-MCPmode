@@ -8,6 +8,12 @@
       "headers": {
         "X-Tushare-Token": "您的tushare令牌"
       }
+    },
+    "fxmacrodata": {
+      "disabled": true,
+      "timeout": 600,
+      "transport": "streamable_http",
+      "url": "https://mcp.fxmacrodata.com"
     }
   }
 }
